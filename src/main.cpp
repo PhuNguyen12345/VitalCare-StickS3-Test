@@ -4,65 +4,84 @@
 // put function declarations here:
 int myFunction(int, int);
 
-unsigned long lastRefresh = 0; 
+M5Canvas canvas(&M5.Display);
+
+unsigned long lastBatteryUpdate = 0;
+unsigned long lastFrameUpdate = 0;
+
+int batteryLevel = 0;
+int batteryVoltage = 0;
+bool charging = false;
+
+void updateBatteryData() {
+    batteryLevel = M5.Power.getBatteryLevel();
+    batteryVoltage = M5.Power.getBatteryVoltage();
+    charging = M5.Power.isCharging();
+}
 
 void drawStatus() {
   const size_t psramBytes = ESP.getPsramSize();
-  const int batteryLevel = M5.Power.getBatteryLevel();
-  const int batteryVoltage = M5.Power.getBatteryVoltage();
-  const bool isCharging = M5.Power.isCharging();
 
-  M5.Display.fillScreen(BLACK);
-  M5.Display.setTextSize(2);
-  M5.Display.setTextColor(WHITE);
-  M5.Display.setCursor(8, 8);
+    // Chỉ xoá vùng nhớ ảo, chưa tác động lên màn hình thật
+    canvas.fillSprite(BLACK);
 
-  M5.Display.println("VitalCare Hardware Test");
-    M5.Display.println("-----------------------");
+    canvas.setTextSize(1.75);
+    canvas.setTextColor(WHITE);
+    canvas.setCursor(8, 8);
 
-    M5.Display.printf(
+    canvas.println("VitalCare Hardware Test");
+    canvas.println("-----------------------");
+
+    canvas.printf(
         "PSRAM: %.1f MB\n",
         psramBytes / 1024.0 / 1024.0
     );
 
-    M5.Display.printf("Battery: %d%%\n", batteryLevel);
-    M5.Display.printf("Voltage: %d mV\n", batteryVoltage);
-    M5.Display.printf(
+    canvas.printf("Battery: %d%%\n", batteryLevel);
+    canvas.printf("Voltage: %d mV\n", batteryVoltage);
+    canvas.printf(
         "Charging: %s\n",
-        isCharging ? "YES" : "NO"
+        charging ? "YES" : "NO"
     );
 
-    M5.Display.printf(
+    canvas.printf(
         "Button A: %s\n",
         M5.BtnA.isPressed() ? "PRESSED" : "Released"
     );
 
-    M5.Display.printf(
+    canvas.printf(
         "Button B: %s\n",
         M5.BtnB.isPressed() ? "PRESSED" : "Released"
     );
+
+    // Đẩy toàn bộ khung hình lên màn hình cùng lúc
+    canvas.pushSprite(0, 0);
 }
 
 void setup() {
   auto cfg = M5.config();
-  M5.begin(cfg);
+    M5.begin(cfg);
 
-  // Chưa cấp nguồn cho Grove
-  M5.Power.setExtOutput(false);
+    M5.Power.setExtOutput(false);
 
-  Serial.begin(115200);
-  delay(500);
+    Serial.begin(115200);
+    delay(500);
 
-  M5.Display.setRotation(1);
-  M5.Display.setTextColor(WHITE);
+    M5.Display.setRotation(1);
 
-  Serial.println("=== VitalCare StickS3 Hardware Test ===");
-  Serial.printf(
+    canvas.createSprite(
+        M5.Display.width(),
+        M5.Display.height()
+    );
+
+    updateBatteryData();
+    drawStatus();
+
+    Serial.println("VitalCare hardware test started");
+    Serial.printf(
         "PSRAM size: %u bytes\n",
         ESP.getPsramSize()
     );
-
-  drawStatus();
 }
 
 void loop() {
@@ -76,12 +95,19 @@ void loop() {
         Serial.println("Button B pressed");
     }
 
-    if (millis() - lastRefresh >= 200) {
-        lastRefresh = millis();
+    // Pin chỉ cần đọc mỗi giây
+    if (millis() - lastBatteryUpdate >= 1000) {
+        lastBatteryUpdate = millis();
+        updateBatteryData();
+    }
+
+    // Giao diện cập nhật 10 lần/giây
+    if (millis() - lastFrameUpdate >= 100) {
+        lastFrameUpdate = millis();
         drawStatus();
     }
 
-    delay(10);
+    delay(5);
 }
 
 // put function definitions here:
