@@ -12,6 +12,16 @@ constexpr uint8_t RTC_TIME_REGISTER = 0x02;
 constexpr int SDA_PIN = 9;
 constexpr int SCL_PIN = 10;
 
+constexpr bool ENABLE_RTC_SETTING = true;
+
+// Hãy sửa thành thời điểm trước khoảng 2–3 phút
+constexpr int SET_YEAR   = 2026;
+constexpr int SET_MONTH  = 10;
+constexpr int SET_DAY    = 5;
+constexpr int SET_HOUR   = 10;
+constexpr int SET_MINUTE = 51;
+constexpr int SET_SECOND = 0;
+
 struct RtcTime {
     int second; 
     int minute; 
@@ -25,6 +35,85 @@ struct RtcTime {
 
 uint8_t bcdToDecimal(uint8_t value) {
     return ((value >> 4) * 10) + (value & 0x0F);
+}
+
+uint8_t decimalToBcd(uint8_t value) {
+    return ((value / 10) << 4) | (value % 10);
+}
+
+// Kết quả: 0 = Chủ nhật, 1 = Thứ hai, ..., 6 = Thứ bảy
+int calculateWeekday(int year, int month, int day) {
+    static const int offsets[] = {
+        0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4
+    };
+
+    if (month < 3) {
+        year--;
+    }
+
+    return (
+        year +
+        year / 4 -
+        year / 100 +
+        year / 400 +
+        offsets[month - 1] +
+        day
+    ) % 7;
+}
+
+bool writeRtcRegister(uint8_t reg, uint8_t value) {
+    Wire.beginTransmission(RTC_ADDRESS);
+    Wire.write(reg);
+    Wire.write(value);
+
+    return Wire.endTransmission() == 0;
+}
+
+bool setRtcTime(
+    int year,
+    int month,
+    int day,
+    int hour,
+    int minute,
+    int second
+) {
+    if (year < 2000 || year > 2099 ||
+        month < 1 || month > 12 ||
+        day < 1 || day > 31 ||
+        hour < 0 || hour > 23 ||
+        minute < 0 || minute > 59 ||
+        second < 0 || second > 59) {
+        return false;
+    }
+
+    uint8_t data[7] = {
+        decimalToBcd(second),
+        decimalToBcd(minute),
+        decimalToBcd(hour),
+        decimalToBcd(day),
+        decimalToBcd(calculateWeekday(year, month, day)),
+        decimalToBcd(month),
+        decimalToBcd(year - 2000)
+    };
+
+    // Dừng bộ đếm RTC trong lúc ghi
+    if (!writeRtcRegister(0x00, 0x20)) {
+        return false;
+    }
+
+    Wire.beginTransmission(RTC_ADDRESS);
+    Wire.write(RTC_TIME_REGISTER);
+
+    for (uint8_t value : data) {
+        Wire.write(value);
+    }
+
+    bool writeSuccessful = Wire.endTransmission() == 0;
+
+    // Khởi động lại bộ đếm, kể cả khi lần ghi trước thất bại
+    bool restartSuccessful = writeRtcRegister(0x00, 0x00);
+
+    return writeSuccessful && restartSuccessful;
 }
 
 
@@ -186,6 +275,25 @@ void setup() {
 
 void loop() {
     M5.update();
+
+    if (ENABLE_RTC_SETTING && M5.BtnA.wasPressed()) {
+    bool success = setRtcTime(
+        SET_YEAR,
+        SET_MONTH,
+        SET_DAY,
+        SET_HOUR,
+        SET_MINUTE,
+        SET_SECOND
+    );
+
+    if (success) {
+        Serial.println("RTC time updated successfully");
+    } else {
+        Serial.println("Failed to update RTC time");
+    }
+
+    delay(300);
+    }
 
     static unsigned long previousRead = 0;
 
