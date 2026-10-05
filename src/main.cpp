@@ -6,155 +6,211 @@
 int myFunction(int, int);
 
 M5Canvas canvas(&M5.Display);
+constexpr uint8_t RTC_ADDRESS = 0X51; 
+constexpr uint8_t RTC_TIME_REGISTER = 0x02; 
 
-constexpr int SDA_PIN = 9; 
-constexpr int SCL_PIN = 10; 
-constexpr uint8_t RTC_ADDRESS = 0x51;
+constexpr int SDA_PIN = 9;
+constexpr int SCL_PIN = 10;
 
-//draw scanning section 
-void drawScanningScreen() {
-    canvas.fillSprite(BLACK); 
-    canvas.setTextSize(1); 
-    canvas.setTextColor(WHITE); 
-    canvas.setCursor(8,8); 
+struct RtcTime {
+    int second; 
+    int minute; 
+    int hour; 
+    int day; 
+    int weekDay; 
+    int month; 
+    int year; 
+    int voltageLow; 
+}; 
 
-    canvas.println("VitalCare RTC Test"); 
-    canvas.println("------------------"); 
-    canvas.println(); 
-    canvas.println("Scanning I2C bus..."); 
-    canvas.println("SDA: G9"); 
-    canvas.println("SCL: G10");
-    
-    //push screen 
-    canvas.pushSprite(0, 0); 
+uint8_t bcdToDecimal(uint8_t value) {
+    return ((value >> 4) * 10) + (value & 0x0F);
 }
 
-//draw result section 
-void drawResultScreen(
-    const uint8_t addresses[], 
-    int deviceCount, 
-    bool rtcFound
-) {
-    canvas.fillSprite(BLACK);
-    canvas.setTextSize(1.75);
-    canvas.setCursor(8, 8);
 
-    canvas.setTextColor(WHITE);
-    canvas.println("VitalCare RTC Test");
-    canvas.println("-----------------------");
+bool readRtcTime(RtcTime &time) {
+    // Chọn thanh ghi bắt đầu: Seconds = 0x02
+    Wire.beginTransmission(RTC_ADDRESS);
+    Wire.write(RTC_TIME_REGISTER);
 
-    if (rtcFound) {
-        canvas.setTextColor(GREEN);
-        canvas.println("RTC HYM8563: OK");
-    } else {
-        canvas.setTextColor(RED);
-        canvas.println("RTC: NOT FOUND");
+    if (Wire.endTransmission(false) != 0) {
+        return false;
     }
 
-    canvas.setTextColor(WHITE);
-    canvas.printf("Devices found: %d\n", deviceCount);
+    // Đọc liên tiếp 7 byte:
+    // giây, phút, giờ, ngày, thứ, tháng, năm
+    uint8_t received =
+        Wire.requestFrom(RTC_ADDRESS, static_cast<uint8_t>(7));
 
-    for (int i = 0; i < deviceCount && i < 8; i++) {
-        canvas.printf(
-            "I2C address: 0x%02X\n",
-            addresses[i]
+    if (received != 7) {
+        return false;
+    }
+
+    uint8_t rawSecond = Wire.read();
+    uint8_t rawMinute = Wire.read();
+    uint8_t rawHour = Wire.read();
+    uint8_t rawDay = Wire.read();
+    uint8_t rawWeekday = Wire.read();
+    uint8_t rawMonth = Wire.read();
+    uint8_t rawYear = Wire.read();
+
+    // Bit 7 của thanh ghi giây là cờ Voltage Low
+    time.voltageLow = (rawSecond & 0x80) != 0;
+
+    time.second  = bcdToDecimal(rawSecond & 0x7F);
+    time.minute  = bcdToDecimal(rawMinute & 0x7F);
+    time.hour    = bcdToDecimal(rawHour & 0x3F);
+    time.day     = bcdToDecimal(rawDay & 0x3F);
+    time.weekDay = bcdToDecimal(rawWeekday & 0x07);
+    time.month   = bcdToDecimal(rawMonth & 0x1F);
+    time.year    = 2000 + bcdToDecimal(rawYear);
+
+    return true;
+}
+
+void drawRtcTime(const RtcTime &time) {
+    char timeText[16];
+    char dateText[16];
+
+    snprintf(
+        timeText,
+        sizeof(timeText),
+        "%02d:%02d:%02d",
+        time.hour,
+        time.minute,
+        time.second
+    );
+
+    snprintf(
+        dateText,
+        sizeof(dateText),
+        "%02d/%02d/%04d",
+        time.day,
+        time.month,
+        time.year
+    );
+
+    canvas.fillScreen(TFT_BLACK);
+    canvas.setTextDatum(middle_center);
+
+    canvas.setTextColor(TFT_CYAN, TFT_BLACK);
+    canvas.setTextSize(1.5);
+    canvas.drawString(
+        "HYM8563 RTC",
+        canvas.width() / 2,
+        12
+    );
+
+    canvas.setTextColor(TFT_WHITE, TFT_BLACK);
+    canvas.setTextSize(2);
+    canvas.drawString(
+        timeText,
+        canvas.width() / 2,
+        45
+    );
+
+    canvas.setTextSize(1.75);
+    canvas.drawString(
+        dateText,
+        canvas.width() / 2,
+        72
+    );
+
+    if (time.voltageLow) {
+        canvas.setTextColor(TFT_YELLOW, TFT_BLACK);
+        canvas.setTextSize(1.5); 
+        canvas.drawString(
+            "VL: Time not valid",
+            canvas.width() / 2,
+            100
+        );
+    } else {
+        canvas.setTextColor(TFT_GREEN, TFT_BLACK);
+        canvas.setTextSize(1.5); 
+        canvas.drawString(
+            "RTC data valid",
+            canvas.width() / 2,
+            100
         );
     }
-
-    canvas.println();
-    canvas.println("Button A: Scan again");
 
     canvas.pushSprite(0, 0);
 }
 
-void scanI2C() {
-    uint8_t foundAddresses[16];
-    int deviceCount = 0;
-    bool rtcFound = false;
+void drawReadError() {
+    canvas.fillScreen(TFT_BLACK);
+    canvas.setTextDatum(middle_center);
 
-    drawScanningScreen();
+    canvas.setTextColor(TFT_RED, TFT_BLACK);
+    canvas.setTextSize(1.5);
 
-    Serial.println();
-    Serial.println("=== VitalCare External I2C Scan ===");
-
-    for (uint8_t address = 1; address < 127; address++) {
-        Wire.beginTransmission(address);
-        uint8_t error = Wire.endTransmission();
-
-        if (error == 0) {
-            Serial.printf(
-                "Device found at 0x%02X\n",
-                address
-            );
-
-            if (deviceCount < 16) {
-                foundAddresses[deviceCount] = address;
-                deviceCount++;
-            }
-
-            if (address == RTC_ADDRESS) {
-                rtcFound = true;
-            }
-        }
-    }
-
-    if (deviceCount == 0) {
-        Serial.println("No I2C device found");
-    }
-
-    if (rtcFound) {
-        Serial.println("HYM8563 RTC detected successfully");
-    } else {
-        Serial.println("HYM8563 RTC was not detected");
-    }
-
-    Serial.printf(
-        "Total I2C devices: %d\n",
-        deviceCount
+    canvas.drawString(
+        "RTC read failed",
+        canvas.width() / 2,
+        45
     );
 
-    drawResultScreen(
-        foundAddresses,
-        deviceCount,
-        rtcFound
+    canvas.setTextColor(TFT_WHITE, TFT_BLACK);
+    canvas.drawString(
+        "Address: 0x51",
+        canvas.width() / 2,
+        70
     );
+
+    canvas.pushSprite(0, 0);
 }
 
+
 void setup() {
-  auto cfg = M5.config();
-    M5.begin(cfg);
+    auto config = M5.config();
+    M5.begin(config);
 
     Serial.begin(115200);
-    delay(500);
 
-    M5.Display.setRotation(1);
+    // Bật nguồn 5V cho thiết bị Grove bên ngoài
+    M5.Power.setExtOutput(true);
+    delay(300);
 
-    // Tạo vùng vẽ ảo bằng đúng kích thước màn hình
+    // Khởi tạo I2C của StickS3
+    Wire.begin(SDA_PIN, SCL_PIN, 100000);
+
     canvas.createSprite(
         M5.Display.width(),
         M5.Display.height()
     );
 
-    // Cấp 5V từ StickS3 ra cổng Grove
-    M5.Power.setExtOutput(true);
-    delay(200);
+    canvas.setTextWrap(false);
 
-    // Khởi tạo bus I2C ngoài
-    Wire.begin(
-        SDA_PIN,
-        SCL_PIN,
-        100000
-    );
-
-    delay(100);
-    scanI2C();
+    Serial.println("Starting HYM8563 RTC reader...");
 }
 
 void loop() {
-  M5.update();
+    M5.update();
 
-    if (M5.BtnA.wasPressed()) {
-        scanI2C();
+    static unsigned long previousRead = 0;
+
+    if (millis() - previousRead >= 1000 || previousRead == 0) {
+        previousRead = millis();
+
+        RtcTime currentTime;
+
+        if (readRtcTime(currentTime)) {
+            drawRtcTime(currentTime);
+
+            Serial.printf(
+                "%02d/%02d/%04d %02d:%02d:%02d | VL=%s\n",
+                currentTime.day,
+                currentTime.month,
+                currentTime.year,
+                currentTime.hour,
+                currentTime.minute,
+                currentTime.second,
+                currentTime.voltageLow ? "YES" : "NO"
+            );
+        } else {
+            drawReadError();
+            Serial.println("Cannot read RTC at address 0x51");
+        }
     }
 
     delay(10);
