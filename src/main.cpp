@@ -12,7 +12,7 @@ constexpr uint8_t RTC_TIME_REGISTER = 0x02;
 constexpr int SDA_PIN = 9;
 constexpr int SCL_PIN = 10;
 
-constexpr bool ENABLE_RTC_SETTING = true;
+constexpr bool ENABLE_RTC_SETTING = false;
 
 // Hãy sửa thành thời điểm trước khoảng 2–3 phút
 constexpr int SET_YEAR   = 2026;
