@@ -61,6 +61,10 @@ ScreenPage currentPage = ScreenPage::CLOCK;
 // ======================================================
 
 struct RTCData {
+    uint16_t year = 0; 
+    uint8_t month = 0;
+    uint8_t day = 0;
+    uint8_t weekday = 0;  // 0: Chủ nhật, 1: Thứ hai, ..., 6: Thứ bảy
     uint8_t hour = 0;
     uint8_t minute = 0;
     uint8_t second = 0;
@@ -136,8 +140,125 @@ bool selectI2CBus(uint8_t sda, uint8_t scl) {
 // Đọc RTC
 // ======================================================
 
+//chuyen doi binary-coded decimal sang decimal  
+/*
+    1 so thong tin can nam ro: 
+    a. bcd: binary-coded decimal: so thap phan duoc ma hoa boi binary, 
+    duoc RTC su dung de luu gia tri ngay thang nam 
+    b. decimal: so thap phan 
+    2. Logic (lay vi du chuyen so thap phan 0x37 (0011 0111)) thanh 37 decimal 
+    a. Trong bcd, moi so thap phan duoc bieu dien boi 4 bit (0011(3) 0111(7))
+    b. Dich bit sang phai 4 bit de lay hang chuc (0011 0111 -> 0000 0011(3)) 
+    c. nhan 10 de dua gia tri vua lay ve hang chuc (3*10 = 30) 
+    d. su dung 0x0F tuc 0000 1111, kem phep tinh AND de giu lai bit cuoi 
+    (0011 0111 & 0000 1111 = 0000 1111 <-> 7 dec) 
+    e. Cong gia tri vao de ra gia tri cuoi (30 + 7 = 37) 
+*/
 uint8_t bcdToDecimal(uint8_t value) {
     return ((value >> 4) * 10) + (value & 0x0F);
+}
+
+
+//chuyen doi decimal to binary-coded decimal 
+/*
+    1 so thong tin can nam ro: 
+    a. bcd: binary-coded decimal: so thap phan duoc ma hoa boi binary, 
+    duoc RTC su dung de luu gia tri ngay thang nam 
+    b. decimal: so thap phan 
+    2. Logic (lay vi du chuyen 37 thanh 0x37)
+    a. Chia 10 de lay phep tinh hang chuc (3) 
+    b. Dich bit sang trai 4 bit de lay duoc gia tri binary tuong ung 
+    (0000 0011 << 4 = 0011 0000 )
+    c. Lay gia tri hang don vi (37 % 10 = 7 <-> 0111)
+    d. dung phep OR de giu lai ca 8 bit (0011 0000 | 0000 0111 = 0011 0111 <-> 0x37)
+
+*/
+uint8_t decimalToBCD(uint8_t value) {
+    return ((value / 10) << 4) | (value % 10); 
+}
+
+//kiem tra xem co phai 1 so binary-coded decimal phu hop 
+//kiem tra xem gia tri 4 bit cao va 4 bit thap co nam trong khoang 
+bool isValidBCD(uint8_t value) {
+    return (value & 0x0F <= 9) <= 9 && (value >> 4) <=9; 
+}
+
+//kiem tra xem co phai nam nhuan 
+bool isLeapYear(int year) {
+    return (year % 4 == 0 && year % 100 != 0) 
+    || (year % 400 == 0); 
+}
+
+//khai bao cac ngay co trong thang theo trinh tu thang 1, thang 2, ... , thang 12 
+uint8_t daysInMonth(int year, int month) {
+    //khai bao danh sach so ngay trong thang theo trinh tu t1, t2, ... , t12 
+    static const uint8_t days[] = {
+        31, 28, 31, 30, 31, 30, 
+        31, 31, 30, 31, 30, 31
+    }; 
+
+    //neu la thang khong hop le, tra ve 0 
+    if (month < 1 || month > 12) {
+        return 0; 
+    }
+
+    //neu la thang 2 trong nam nhuan 
+    if (month == 2 && isLeapYear(year)) {
+        return 29; //se co 29 ngay 
+    }
+
+    //con lai, se lay so ngay theo vi tri trong arr, tinh tu so 0 
+    return days[month - 1]; 
+}
+
+//kiem tra xem co phai la ngay thang nam hop le 
+bool isValidDateTime(
+    int year, int month, int day, 
+    int hour, int minute, int second
+) {
+    //HYM8563 Linux chi cho phep ghi thoi gian tu 2000 toi 2099 
+    if (year < 2000 || year > 2099) return false; 
+    //cac thang keo dai tu 1 toi 12 
+    if (month < 1 || month > 12) return false; 
+    //do chinh xac cua ngay keo dai 
+    if (day < 1 || day > daysInMonth(year, month)) return false; 
+    //thoi gian keo dai tu 0h toi 23h 
+    if (hour < 0 || hour > 23) return false; 
+    //phut se keo dai tu 0 toi 59 
+    if (minute < 0 || minute > 59) return false; 
+    //giay se keo dai tu 0 toi 59 
+    if (second < 0 || second > 59) return false; 
+
+    //cac truong hop con lai true 
+    return true; 
+}
+
+// ham de tinh toan thu trong tuan 
+//0 = chu nhat, 1 = thu hai, 2 = thu ba, ...
+/*
+    a. Mot so thong tin can ghi nho: 
+    - offset[]: do lech thu theo thang duoc quy dinh san 
+    (so ngay dich theo thang)
+    - year: nam (trong nay se coi la so ngay dich theo bam) 
+    - month: thang 
+    - day: ngay 
+    b. Cac cong thuc can chu y
+    1. quy uoc: thang 1, 2 thuoc nam truoc 
+    2. year/4 - year/100 + year/4000
+    (cong thuc dung de trich xuat so ngay nhuan trong nam) 
+    3. 
+*/ 
+uint8_t calculateWeekday(int year, int month, int day) {
+    //danh sach do lech thu trong thang 
+    static const int offsets[] = {
+        0, 3, 2, 5, 0, 3, 
+        5, 1, 4, 6, 2, 4
+    }; 
+
+    //phep tinh coi thang 1 va thang 2 thuoc nam truoc 
+    if (month < 3) {
+        year--; 
+    }
 }
 
 bool readRTC() {
