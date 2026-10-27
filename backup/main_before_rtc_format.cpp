@@ -25,11 +25,11 @@ constexpr uint8_t MAX_SCL = 6;
 // ======================================================
 
 constexpr uint8_t SEN_ADDRESS = 0x55;
-constexpr uint8_t SEN_SDA = 4;
-constexpr uint8_t SEN_SCL = 5;
+constexpr uint8_t SEN_SDA = 7;
+constexpr uint8_t SEN_SCL = 6;
 
-constexpr uint8_t SEN_MFIO = 1;
-constexpr uint8_t SEN_RESET = 8;
+constexpr uint8_t SEN_MFIO = 8;
+constexpr uint8_t SEN_RESET = 1;
 
 // Constructor nhận RESET trước, MFIO sau
 SparkFun_Bio_Sensor_Hub bioHub(SEN_RESET, SEN_MFIO);
