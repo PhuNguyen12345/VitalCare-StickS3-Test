@@ -39,12 +39,16 @@ SCALE = 2
 LOG_MAX_LINES = 2000
 POLL_MS = 20
 
+# Chờ một chút trước khi coi là nhả phím, để lọc cặp nhả/nhấn của auto-repeat
+KEY_RELEASE_DEBOUNCE_MS = 40
+
 BODY_COLOR = "#e8662a"
 BODY_EDGE = "#b84a17"
 BUTTON_COLOR = "#f2f2f2"
 BUTTON_ACTIVE = "#9be38a"
 BUTTON_HOLD = "#f5c542"
 ERROR_COLOR = "#d93025"
+MUTED_TEXT = "#9a9a9a"
 
 
 class SerialWorker(threading.Thread):
@@ -170,6 +174,7 @@ class SimulatorApp:
         self.screen_dirty = False
         self.photo = None
         self.text_buffer = ""
+        self.pending_key_release = {}
 
         self.stats_started = time.monotonic()
         self.stats_frames = 0
@@ -276,26 +281,29 @@ class SimulatorApp:
         panel = ttk.LabelFrame(self.root, text="Nút ảo & phím tắt")
         panel.grid(row=1, column=0, padx=12, pady=(0, 12), sticky="nsew")
 
-        columns = ("action", "mouse", "key", "command", "effect")
-        headings = ("Thao tác", "Chuột", "Bàn phím", "Lệnh", "Tác dụng")
-        widths = (90, 150, 70, 50, 170)
+        # Lưới Label thay cho Treeview để tô màu riêng từng cột
+        headings = ("Thao tác", "Chuột", "Bàn phím", "Gửi qua serial", "Tác dụng")
+        serial_column = 3
 
-        table = ttk.Treeview(
-            panel,
-            columns=columns,
-            show="headings",
-            height=len(self.SHORTCUTS),
-            selectmode="none",
-        )
+        for column, heading in enumerate(headings):
+            ttk.Label(
+                panel,
+                text=heading,
+                font="TkHeadingFont",
+                foreground=MUTED_TEXT if column == serial_column else "",
+            ).grid(row=0, column=column, sticky="w", padx=6, pady=(4, 2))
 
-        for column, heading, width in zip(columns, headings, widths):
-            table.heading(column, text=heading, anchor="w")
-            table.column(column, width=width, anchor="w", stretch=column == "effect")
+        ttk.Separator(panel).grid(row=1, column=0, columnspan=len(headings), sticky="ew", padx=6)
 
-        for row in self.SHORTCUTS:
-            table.insert("", "end", values=row)
+        for row, values in enumerate(self.SHORTCUTS, start=2):
+            for column, value in enumerate(values):
+                ttk.Label(
+                    panel,
+                    text=value,
+                    foreground=MUTED_TEXT if column == serial_column else "",
+                ).grid(row=row, column=column, sticky="w", padx=6, pady=1)
 
-        table.pack(fill="both", expand=True, padx=6, pady=6)
+        panel.columnconfigure(len(headings) - 1, weight=1)
 
     def _build_side_panel(self):
         side = ttk.Frame(self.root)
@@ -308,7 +316,8 @@ class SimulatorApp:
         connection.pack(fill="x")
 
         self.port_var = tk.StringVar()
-        self.port_box = ttk.Combobox(connection, textvariable=self.port_var, width=26)
+        # readonly: không cho gõ vào ô, tránh phím a/b bị gõ thành tên cổng
+        self.port_box = ttk.Combobox(connection, textvariable=self.port_var, width=26, state="readonly")
         self.port_box.grid(row=0, column=0, padx=6, pady=6)
 
         ttk.Button(connection, text="Làm mới", command=self.refresh_ports).grid(row=0, column=1, padx=2)
@@ -352,9 +361,51 @@ class SimulatorApp:
         )
 
     def _bind_keys(self):
-        for key, button in (("a", self.button_a), ("b", self.button_b)):
-            self.root.bind(f"<KeyPress-{key}>", button.press)
-            self.root.bind(f"<KeyRelease-{key}>", button.release)
+        # bind_all: bắt phím dù widget nào đang giữ focus
+        self.root.bind_all("<KeyPress>", self._on_key_press)
+        self.root.bind_all("<KeyRelease>", self._on_key_release)
+
+        # Click vào thân máy thì lấy lại focus bàn phím cho app
+        self.device.bind("<ButtonPress-1>", lambda _event: self.device.focus_set(), add="+")
+
+        # App mở từ Terminal trên macOS thường chưa có focus bàn phím
+        self.root.after(300, self._take_focus)
+
+    def _take_focus(self):
+        self.root.lift()
+        self.root.focus_force()
+        self.device.focus_set()
+
+    def _key_button(self, event):
+        # lower(): vẫn nhận khi bật Caps Lock hoặc giữ Shift
+        return {"a": self.button_a, "b": self.button_b}.get(event.keysym.lower())
+
+    def _on_key_press(self, event):
+        button = self._key_button(event)
+        if button is None:
+            return
+
+        # Auto-repeat có thể gửi cặp nhả/nhấn liên tục khi giữ phím:
+        # nhấn lại ngay sau khi nhả nghĩa là phím vẫn đang được giữ
+        pending = self.pending_key_release.pop(button, None)
+        if pending is not None:
+            self.root.after_cancel(pending)
+            return
+
+        button.press()
+
+    def _on_key_release(self, event):
+        button = self._key_button(event)
+        if button is None:
+            return
+
+        self.pending_key_release[button] = self.root.after(
+            KEY_RELEASE_DEBOUNCE_MS, lambda: self._release_key(button)
+        )
+
+    def _release_key(self, button):
+        self.pending_key_release.pop(button, None)
+        button.release()
 
     def _paint_button(self, item, state):
         color = {"pressed": BUTTON_ACTIVE, "hold": BUTTON_HOLD}.get(state, BUTTON_COLOR)
@@ -392,6 +443,9 @@ class SimulatorApp:
         self.connect_button.configure(text="Disconnect")
         self.status_var.set(f"Đang mở {port}...")
 
+        # Trả focus về thân máy để dùng phím tắt ngay
+        self.device.focus_set()
+
     def disconnect(self):
         if self.worker is None:
             return
@@ -402,8 +456,11 @@ class SimulatorApp:
         self.connect_button.configure(text="Connect")
 
     def send_command(self, command):
-        if self.worker is not None:
-            self.worker.send(command)
+        if self.worker is None:
+            self.append_log(f"[sim] Chưa kết nối, bỏ lệnh '{command}'. Hãy chọn cổng rồi bấm Connect")
+            return
+
+        self.worker.send(command)
 
     def on_close(self):
         self.disconnect()
