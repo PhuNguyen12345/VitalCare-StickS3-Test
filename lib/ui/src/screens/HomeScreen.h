@@ -13,6 +13,7 @@ public:
         canvas.fillSprite(Theme::BACKGROUND);
 
         drawTitle(canvas, "VITALCARE - RTC", TFT_CYAN);
+        drawConnection(canvas, model.status);
 
         if (model.time.valid) {
             char timeText[12];
@@ -32,5 +33,23 @@ public:
         }
 
         drawFooter(canvas, "A: Measurements");
+    }
+
+private:
+    // Góc trên bên phải: SYNC khi đang đồng bộ, BLE khi đã kết nối
+    static void drawConnection(M5Canvas& canvas, const DeviceStatus& status) {
+        if (!status.bleConnected) {
+            return;
+        }
+
+        canvas.setTextDatum(top_right);
+        canvas.setTextSize(Theme::FONT_SMALL);
+        canvas.setTextColor(status.syncing ? TFT_ORANGE : TFT_GREEN, Theme::BACKGROUND);
+
+        canvas.drawString(
+            status.syncing ? "SYNC" : "BLE",
+            canvas.width() - 4,
+            6
+        );
     }
 };

@@ -45,6 +45,16 @@ void StickS3Board::update() {
     }
 }
 
+uint8_t StickS3Board::batteryLevel() {
+    int32_t level = M5.Power.getBatteryLevel();
+
+    if (level < 0) {
+        return 0;
+    }
+
+    return (uint8_t)min(level, (int32_t)100);
+}
+
 bool StickS3Board::poll(AppEvent& out) {
     if (queueCount_ == 0) {
         return false;

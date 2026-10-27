@@ -21,6 +21,23 @@ constexpr uint32_t BIO_INTERVAL = 250;
 constexpr uint32_t DISPLAY_INTERVAL = 200;
 constexpr uint32_t SERIAL_INTERVAL = 1000;
 
+// Lưu trữ LittleFS: mẫu mỗi giây, mỗi 10 giây ghi một bản ghi trung bình
+constexpr uint32_t LOG_SAMPLE_INTERVAL = 1000;
+constexpr uint32_t LOG_WINDOW = 10000;
+constexpr uint32_t LOG_SEGMENT_MAX_BYTES = 16 * 1024;
+constexpr uint32_t LOG_RESERVE_BYTES = 64 * 1024;
+
+// BLE
+constexpr uint32_t BLE_LIVE_INTERVAL = 1000;
+constexpr uint32_t BLE_STATUS_INTERVAL = 5000;
+constexpr uint32_t BLE_SYNC_ACK_TIMEOUT = 10000;
+
+// Pin
+constexpr uint32_t BATTERY_INTERVAL = 5000;
+
+// Múi giờ mặc định (phút so với UTC): Việt Nam UTC+7
+constexpr int16_t DEFAULT_TZ_MINUTES = 420;
+
 // Nút bấm
 constexpr uint32_t BUTTON_HOLD_MS = 800;
 

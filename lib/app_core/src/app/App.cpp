@@ -2,8 +2,16 @@
 
 #include <stdio.h>
 
-App::App(TimeService* timeService, MeasurementService* measurementService)
-    : timeService_(timeService), measurementService_(measurementService) {}
+App::App(
+    TimeService* timeService,
+    MeasurementService* measurementService,
+    LogService* logService,
+    SyncService* syncService
+)
+    : timeService_(timeService),
+      measurementService_(measurementService),
+      logService_(logService),
+      syncService_(syncService) {}
 
 void App::begin(uint32_t nowMs) {
     // Khởi tạo SEN trước (theo thứ tự đã thêm vào MeasurementService), rồi tới RTC
@@ -13,6 +21,10 @@ void App::begin(uint32_t nowMs) {
 
     if (timeService_ != nullptr) {
         timeService_->begin(nowMs);
+    }
+
+    if (logService_ != nullptr) {
+        logService_->begin(nowMs);
     }
 
     state_.page = ScreenPage::Clock;
@@ -26,6 +38,20 @@ void App::update(uint32_t nowMs) {
 
     if (measurementService_ != nullptr) {
         measurementService_->update(nowMs);
+    }
+
+    HealthReading reading;
+
+    if (measurementService_ != nullptr) {
+        reading = measurementService_->reading();
+    }
+
+    if (logService_ != nullptr && timeService_ != nullptr) {
+        logService_->update(nowMs, reading, timeService_->epochUtc(), timeService_->time().reliable);
+    }
+
+    if (syncService_ != nullptr) {
+        syncService_->update(nowMs, reading, deviceStatus());
     }
 }
 
@@ -63,17 +89,38 @@ AppViewModel App::viewModel() const {
     model.page = state_.page;
 
     if (timeService_ != nullptr) {
-        model.time = timeService_->time();
+        model.time = timeService_->localTime();
     }
 
     if (measurementService_ != nullptr) {
         model.reading = measurementService_->reading();
-        model.status = measurementService_->status();
     }
 
-    model.status.rtcOk = model.time.valid;
+    model.status = deviceStatus();
 
     return model;
+}
+
+DeviceStatus App::deviceStatus() const {
+    DeviceStatus status;
+
+    if (measurementService_ != nullptr) {
+        status = measurementService_->status();
+    }
+
+    if (timeService_ != nullptr) {
+        status.rtcOk = timeService_->time().valid;
+    }
+
+    status.batteryLevel = batteryLevel_;
+
+    if (syncService_ != nullptr) {
+        status.bleConnected = syncService_->connected();
+        status.syncing = syncService_->syncing();
+        status.pendingSegments = syncService_->logStats().segmentCount;
+    }
+
+    return status;
 }
 
 void App::goToNextMeasurementPage() {

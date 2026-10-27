@@ -7,3 +7,9 @@
 # Ảnh chụp canvas từ tools/canvas_capture.py
 captures/
 .venv/
+
+# Log đồng bộ từ tools/ble_client.py
+ble_logs/
+
+# Bytecode Python
+__pycache__/

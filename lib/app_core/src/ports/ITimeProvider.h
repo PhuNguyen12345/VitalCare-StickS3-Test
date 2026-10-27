@@ -8,4 +8,7 @@ public:
 
     virtual bool begin() = 0;
     virtual bool read(TimeInfo& out) = 0;
+
+    // Ghi ngày giờ (UTC) xuống đồng hồ
+    virtual bool write(const TimeInfo& time) = 0;
 };

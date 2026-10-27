@@ -6,6 +6,7 @@ m5sticks3-health-device/
 ├── include/
 │   ├── AppConfig.h
 │   ├── BoardPins.h
+│   ├── BleConfig.h                     (*) UUID, tên quảng bá, MTU
 │   └── BuildConfig.h
 │
 ├── src/
@@ -33,8 +34,13 @@ m5sticks3-health-device/
 │   │       │   ├── IInputSource.h          (*)
 │   │       │   ├── ILogRepository.h
 │   │       │   ├── IConnectivity.h
+│   │       │   ├── IConfigRepository.h     (*)
 │   │       │   ├── IAlertService.h
 │   │       │   └── IDisplay.h
+│   │       │
+│   │       ├── protocol/                   (*)
+│   │       │   ├── BleProtocol.h           mã hóa / giải mã gói BLE
+│   │       │   └── BleProtocol.cpp
 │   │       │
 │   │       └── services/
 │   │           ├── MeasurementService.h
@@ -111,10 +117,19 @@ m5sticks3-health-device/
 │   ├── vc_protocol.py                  giao thức frame / @DATA dùng chung
 │   ├── vc_simulator.py                 app Tkinter: mirror màn hình + nút A/B ảo
 │   ├── canvas_capture.py               Serial monitor + chụp PNG
+│   ├── ble_client.py                   client BLE (bleak): scan / live / settime / sync
 │   └── requirements.txt
+│
+├── docs/                               (*)
+│   └── BLE_PROTOCOL.md                 giao thức BLE cho nhóm app Flutter
 │
 └── test/
     ├── test_app_state/
+    ├── test_time_epoch/                (*)
+    ├── test_measurement_log/           (*)
+    ├── test_ble_protocol/              (*)
+    ├── test_log_service/               (*)
+    ├── test_sync_service/              (*)
     ├── test_time_service/
     └── test_measurement_service/
 
@@ -132,4 +147,8 @@ m5sticks3-health-device/
 - **`tools/`**: script Python chạy trên máy tính, không build vào firmware.
 - **`ports/ISensorProvider.h`** có thêm `reportStatus(DeviceStatus&)`, để mỗi cảm biến tự báo trạng thái của mình (SEN đã khởi tạo chưa, lần đọc MAX gần nhất có thành công không).
 
-Hiện mới có những phần mà code đang dùng. Các file còn lại trong cây trên (BLE, LittleFS, WiFi/NTP, alert, Settings/Connection/Diagnostic/Result screen, MockSensorProvider) sẽ thêm ở các đợt sau.
+- **`protocol/BleProtocol`**: mã hóa/giải mã gói BLE nằm trong `app_core`, không phụ thuộc NimBLE, để test được trên máy tính. `BleManager` chỉ truyền byte.
+- **`ports/IConfigRepository.h`**: cấu hình lưu bền (hiện là múi giờ), do `PreferencesConfigRepository` lưu trong NVS.
+- **`docs/`**: tài liệu cho nhóm khác (app điện thoại).
+
+Hiện mới có những phần mà code đang dùng. Các file còn lại trong cây trên (WiFi/NTP, alert, Settings/Connection/Diagnostic/Result screen, MockSensorProvider, `test_time_service`, `test_measurement_service`) sẽ thêm ở các đợt sau.

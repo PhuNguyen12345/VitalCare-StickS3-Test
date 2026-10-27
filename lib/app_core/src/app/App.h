@@ -5,7 +5,9 @@
 #include "app/AppEvent.h"
 #include "app/AppState.h"
 #include "app/AppViewModel.h"
+#include "services/LogService.h"
 #include "services/MeasurementService.h"
+#include "services/SyncService.h"
 #include "services/TimeService.h"
 
 class App {
@@ -13,13 +15,20 @@ public:
     using LogFn = void (*)(const char* message);
 
     // Service có thể là nullptr (dùng khi test)
-    App(TimeService* timeService, MeasurementService* measurementService);
+    App(
+        TimeService* timeService = nullptr,
+        MeasurementService* measurementService = nullptr,
+        LogService* logService = nullptr,
+        SyncService* syncService = nullptr
+    );
 
     void setLogger(LogFn logger) { logger_ = logger; }
 
     void begin(uint32_t nowMs);
     void update(uint32_t nowMs);
     void handleEvent(AppEvent event);
+
+    void setBatteryLevel(uint8_t level) { batteryLevel_ = level; }
 
     ScreenPage page() const { return state_.page; }
 
@@ -32,9 +41,13 @@ private:
     void goToNextMeasurementPage();
     void goToClockPage();
     void log(const char* message) const;
+    DeviceStatus deviceStatus() const;
 
     TimeService* timeService_;
     MeasurementService* measurementService_;
+    LogService* logService_;
+    SyncService* syncService_;
     LogFn logger_ = nullptr;
+    uint8_t batteryLevel_ = 0;
     AppState state_;
 };

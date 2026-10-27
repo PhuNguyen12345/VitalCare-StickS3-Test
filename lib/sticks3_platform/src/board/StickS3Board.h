@@ -16,6 +16,9 @@ public:
 
     M5GFX& display() { return M5.Display; }
 
+    // 0..100 (%), 0 nếu không đọc được
+    uint8_t batteryLevel();
+
 private:
     void push(AppEvent event);
 

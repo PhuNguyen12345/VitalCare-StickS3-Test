@@ -161,6 +161,10 @@ class SimulatorApp:
         ("status", "Finger status"),
         ("page", "Trang"),
         ("sen", "SEN"),
+        ("bat", "Pin (%)"),
+        ("ble", "BLE"),
+        ("sync", "Đang đồng bộ"),
+        ("logseg", "Segment chờ đồng bộ"),
         ("mirror", "Mirror"),
     ]
 

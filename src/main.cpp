@@ -2,17 +2,23 @@
 #include <Wire.h>
 
 #include "AppConfig.h"
+#include "BleConfig.h"
 #include "BoardPins.h"
 #include "BuildConfig.h"
 
 #include "app/App.h"
+#include "services/LogService.h"
 #include "services/MeasurementService.h"
+#include "services/SyncService.h"
 #include "services/TimeService.h"
 
 #include "board/I2cBusManager.h"
 #include "board/StickS3Board.h"
+#include "connectivity/BleManager.h"
 #include "sensors/Max30205Provider.h"
 #include "sensors/SenSensorProvider.h"
+#include "storage/LittleFsLogRepository.h"
+#include "storage/PreferencesConfigRepository.h"
 #include "time/RtcTimeProvider.h"
 
 #include "UiController.h"
@@ -57,18 +63,63 @@ RtcTimeProvider rtc(
     BoardPins::RTC_ADDRESS
 );
 
+PreferencesConfigRepository configRepository;
+
+LittleFsLogRepository logRepository(
+    AppConfig::LOG_SEGMENT_MAX_BYTES,
+    AppConfig::LOG_RESERVE_BYTES
+);
+
+BleManager ble(
+    BleConfig::NAME_PREFIX,
+    {
+        BleConfig::SERVICE_UUID,
+        BleConfig::LIVE_UUID,
+        BleConfig::CONTROL_UUID,
+        BleConfig::SYNC_UUID,
+        BleConfig::STATUS_UUID
+    },
+    BleConfig::PREFERRED_MTU
+);
+
 // ======================================================
 // Ứng dụng
 // ======================================================
 
 MeasurementService measurementService;
-TimeService timeService(rtc, AppConfig::RTC_INTERVAL);
 
-App app(&timeService, &measurementService);
+TimeService timeService(
+    rtc,
+    &configRepository,
+    AppConfig::RTC_INTERVAL,
+    AppConfig::DEFAULT_TZ_MINUTES
+);
+
+LogService logService(
+    logRepository,
+    AppConfig::LOG_SAMPLE_INTERVAL,
+    AppConfig::LOG_WINDOW
+);
+
+SyncService syncService(
+    ble,
+    logRepository,
+    timeService,
+    AppConfig::BLE_LIVE_INTERVAL,
+    AppConfig::BLE_STATUS_INTERVAL,
+    AppConfig::BLE_SYNC_ACK_TIMEOUT
+);
+
+App app(&timeService, &measurementService, &logService, &syncService);
 
 UiController ui(M5.Display);
 
 uint32_t lastDisplayUpdate = 0;
+uint32_t lastBatteryRead = 0;
+
+void logLine(const char* message) {
+    Serial.println(message);
+}
 
 // ======================================================
 // Công cụ phát triển (mirror, lệnh Serial, @DATA)
@@ -103,7 +154,14 @@ void setup() {
 
     ui.showBoot();
 
-    app.setLogger([](const char* message) { Serial.println(message); });
+    app.setLogger(logLine);
+    syncService.setLogger(logLine);
+
+    configRepository.begin();
+    logRepository.begin();
+    syncService.begin();
+
+    app.setBatteryLevel(board.batteryLevel());
 
     // Khởi tạo SEN-15219 trước, rồi MAX30205
     measurementService.addSource(senSensor, AppConfig::BIO_INTERVAL);
@@ -144,6 +202,11 @@ void loop() {
 #endif
 
     uint32_t now = millis();
+
+    if (now - lastBatteryRead >= AppConfig::BATTERY_INTERVAL) {
+        lastBatteryRead = now;
+        app.setBatteryLevel(board.batteryLevel());
+    }
 
     app.update(now);
 

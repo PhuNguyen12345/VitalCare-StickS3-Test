@@ -93,8 +93,12 @@ void TelemetryPrinter::printData(const AppViewModel& model, bool mirrorEnabled) 
     }
 
     out_.printf(
-        " sen=%d page=%s mirror=%d\n",
+        " sen=%d bat=%u ble=%d sync=%d logseg=%u page=%s mirror=%d\n",
         model.status.senInitialized ? 1 : 0,
+        model.status.batteryLevel,
+        model.status.bleConnected ? 1 : 0,
+        model.status.syncing ? 1 : 0,
+        model.status.pendingSegments,
         screenPageName(model.page),
         mirrorEnabled ? 1 : 0
     );
