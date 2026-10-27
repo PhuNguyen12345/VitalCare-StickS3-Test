@@ -180,6 +180,7 @@ class SimulatorApp:
         root.protocol("WM_DELETE_WINDOW", self.on_close)
 
         self._build_device()
+        self._build_shortcuts()
         self._build_side_panel()
         self._build_status_bar()
         self._bind_keys()
@@ -248,12 +249,6 @@ class SimulatorApp:
         )
         self.device.create_text(b_x, 31, text="B", font=("Helvetica", 11, "bold"), tags="btnB")
 
-        self.device.create_text(
-            10 + body_w / 2, 40 + body_h + 22,
-            text=f"Click = nhấn  |  Giữ ≥ {HOLD_MS} ms = hold  |  Phím tắt: a / b",
-            fill="#666666",
-        )
-
         self.button_a = VirtualButton(
             self.root, "n", "N", self.send_command,
             lambda state: self._paint_button(self.button_a_item, state),
@@ -267,11 +262,46 @@ class SimulatorApp:
             self.device.tag_bind(tag, "<ButtonPress-1>", button.press)
             self.device.tag_bind(tag, "<ButtonRelease-1>", button.release)
 
+    # Thao tác, cách dùng chuột / bàn phím, lệnh gửi xuống thiết bị, tác dụng
+    SHORTCUTS = [
+        ("Click A", "Click nút A", "a", "n", "Sang trang đo kế tiếp"),
+        ("Giữ A", f"Giữ nút A ≥ {HOLD_MS} ms", "Giữ a", "N", "Chưa gán chức năng"),
+        ("Click B", "Click nút B", "b", "c", "Về trang đồng hồ"),
+        ("Giữ B", f"Giữ nút B ≥ {HOLD_MS} ms", "Giữ b", "C", "Chưa gán chức năng"),
+        ("Test pattern", "Nút Test pattern", "—", "t", "Hiện dải màu kiểm tra"),
+        ("Capture PNG", "Nút Capture PNG", "—", "—", "Lưu ảnh vào captures/"),
+    ]
+
+    def _build_shortcuts(self):
+        panel = ttk.LabelFrame(self.root, text="Nút ảo & phím tắt")
+        panel.grid(row=1, column=0, padx=12, pady=(0, 12), sticky="nsew")
+
+        columns = ("action", "mouse", "key", "command", "effect")
+        headings = ("Thao tác", "Chuột", "Bàn phím", "Lệnh", "Tác dụng")
+        widths = (90, 150, 70, 50, 170)
+
+        table = ttk.Treeview(
+            panel,
+            columns=columns,
+            show="headings",
+            height=len(self.SHORTCUTS),
+            selectmode="none",
+        )
+
+        for column, heading, width in zip(columns, headings, widths):
+            table.heading(column, text=heading, anchor="w")
+            table.column(column, width=width, anchor="w", stretch=column == "effect")
+
+        for row in self.SHORTCUTS:
+            table.insert("", "end", values=row)
+
+        table.pack(fill="both", expand=True, padx=6, pady=6)
+
     def _build_side_panel(self):
         side = ttk.Frame(self.root)
-        side.grid(row=0, column=1, padx=(0, 12), pady=12, sticky="nsew")
+        side.grid(row=0, column=1, rowspan=2, padx=(0, 12), pady=12, sticky="nsew")
         self.root.columnconfigure(1, weight=1)
-        self.root.rowconfigure(0, weight=1)
+        self.root.rowconfigure(1, weight=1)
 
         # Kết nối
         connection = ttk.LabelFrame(side, text="Kết nối")
@@ -318,7 +348,7 @@ class SimulatorApp:
     def _build_status_bar(self):
         self.status_var = tk.StringVar(value="Chưa kết nối")
         ttk.Label(self.root, textvariable=self.status_var, anchor="w").grid(
-            row=1, column=0, columnspan=2, sticky="ew", padx=12, pady=(0, 8)
+            row=2, column=0, columnspan=2, sticky="ew", padx=12, pady=(0, 8)
         )
 
     def _bind_keys(self):
