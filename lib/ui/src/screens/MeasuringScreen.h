@@ -78,8 +78,10 @@ private:
             return;
         }
 
-        // Status 3: phát hiện ngón tay
-        if (!reading.bioValid || reading.fingerStatus != 3) {
+        // Cùng quy tắc với gói live và log CSV
+        BioSampleQuality quality = evaluateBioSample(reading);
+
+        if (!quality.fingerDetected) {
             drawCentered(canvas, "PLACE FINGER", TFT_YELLOW, Theme::FONT_MESSAGE, -8);
 
             drawCentered(
@@ -89,6 +91,13 @@ private:
                 Theme::FONT_SMALL,
                 22
             );
+            return;
+        }
+
+        // Có ngón tay nhưng chưa đạt ngưỡng: chưa hiện số
+        if (!(isHeartRate ? quality.heartRateValid : quality.spo2Valid)) {
+            drawCentered(canvas, isHeartRate ? "-- BPM" : "-- %", TFT_DARKGREY, Theme::FONT_VALUE, -7);
+            drawCentered(canvas, "Measuring...", TFT_YELLOW, Theme::FONT_SMALL, 27);
             return;
         }
 
@@ -104,10 +113,11 @@ private:
 
         char confidenceText[24];
 
+        // confidence là độ tin cậy của nhịp tim, ghi rõ khi ở trang SpO2
         snprintf(
             confidenceText,
             sizeof(confidenceText),
-            "Confidence: %d%%",
+            isHeartRate ? "Confidence: %d%%" : "HR conf: %d%%",
             reading.confidence
         );
 

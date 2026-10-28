@@ -31,7 +31,6 @@ bool LittleFsLogRepository::begin() {
 
     uint16_t minId = UINT16_MAX;
     uint16_t maxId = 0;
-    uint32_t maxSize = 0;
 
     stats_ = LogStats();
 
@@ -51,7 +50,6 @@ bool LittleFsLogRepository::begin() {
 
             if (id > maxId) {
                 maxId = id;
-                maxSize = file.size();
             }
         }
 
@@ -66,15 +64,11 @@ bool LittleFsLogRepository::begin() {
         activeId_ = 1;
         activeSize_ = 0;
     } else {
+        // Mỗi lần khởi động ghi sang segment mới: không ghi tiếp vào file của firmware cũ
+        // (có thể khác định dạng), segment cũ được coi là đã đóng và sẵn sàng đồng bộ
         oldestId_ = minId;
-        activeId_ = maxId;
-        activeSize_ = maxSize;
-
-        // Segment mới nhất đã đầy thì ghi sang segment mới
-        if (activeSize_ >= segmentMaxBytes_) {
-            activeId_++;
-            activeSize_ = 0;
-        }
+        activeId_ = maxId + 1;
+        activeSize_ = 0;
     }
 
     refreshFreeBytes();

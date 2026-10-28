@@ -370,7 +370,7 @@ void test_live_every_second_only_when_connected() {
     TEST_ASSERT_EQUAL(LIVE_SIZE, p.size());
     TEST_ASSERT_EQUAL_UINT32(1761550000, u32(p, 0));
     TEST_ASSERT_EQUAL_INT16(3652, (int16_t)u16(p, 4));
-    TEST_ASSERT_EQUAL_UINT8(LogFlags::BIO_INVALID, p[11]);  // SEN chưa sẵn sàng
+    TEST_ASSERT_EQUAL_UINT8(LogFlags::BIO_INVALID | LogFlags::SPO2_INVALID, p[11]);  // SEN chưa sẵn sàng
     TEST_ASSERT_EQUAL_UINT16(2, u16(p, 12));                // seq
 
     f.link.connected = false;
@@ -397,6 +397,23 @@ void test_set_time_writes_rtc_and_timezone() {
     TEST_ASSERT_EQUAL_INT16(-300, (int16_t)u16(p, 7));
 }
 
+void test_live_sends_raw_values_with_quality_flags() {
+    Fixture f;
+    f.status.senInitialized = true;
+    f.reading.bioValid = true;
+    f.reading.fingerStatus = 3;
+    f.reading.heartRate = 62;
+    f.reading.confidence = 98;
+    f.reading.spo2 = 0;  // Chưa tính xong SpO2
+
+    f.step(100);
+
+    const Packet& p = f.link.live.back();
+    TEST_ASSERT_EQUAL_UINT16(62, u16(p, 6));
+    TEST_ASSERT_EQUAL_UINT8(0, p[8]);
+    TEST_ASSERT_EQUAL_UINT8(LogFlags::TEMP_INVALID | LogFlags::SPO2_INVALID, p[11]);
+}
+
 int main() {
     UNITY_BEGIN();
     RUN_TEST(test_full_sync_sends_all_segments_and_deletes_after_ack);
@@ -408,5 +425,6 @@ int main() {
     RUN_TEST(test_empty_log_sends_done_immediately);
     RUN_TEST(test_live_every_second_only_when_connected);
     RUN_TEST(test_set_time_writes_rtc_and_timezone);
+    RUN_TEST(test_live_sends_raw_values_with_quality_flags);
     return UNITY_END();
 }

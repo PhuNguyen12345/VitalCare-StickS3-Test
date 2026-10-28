@@ -46,7 +46,8 @@ OP_SET_TIME = 0x01
 OP_SYNC_START = 0x02
 OP_SYNC_ACK = 0x03
 
-LOG_FLAGS = {0x01: "TIME_INVALID", 0x02: "TEMP_INVALID", 0x04: "BIO_INVALID", 0x08: "LOOSE", 0x10: "ALERT"}
+LOG_FLAGS = {0x01: "TIME_INVALID", 0x02: "TEMP_INVALID", 0x04: "BIO_INVALID", 0x08: "LOOSE", 0x10: "ALERT",
+             0x20: "SPO2_INVALID"}
 STATUS_FLAGS = {0x01: "RTC_VALID", 0x02: "SEN_READY", 0x04: "SYNCING", 0x08: "LOG_OVERFLOW"}
 
 
@@ -270,7 +271,8 @@ async def cmd_sync(args):
 
                 path = out_dir / f"seg_{segment_id:05d}_{datetime.now():%Y%m%d_%H%M%S}.csv"
                 path.write_bytes(buffer)
-                records = sum(1 for line in buffer.decode("ascii", "replace").splitlines() if line and not line.startswith("#"))
+                # Bản ghi bắt đầu bằng số; bỏ qua dòng "#v2" và dòng tên cột
+                records = sum(1 for line in buffer.decode("ascii", "replace").splitlines() if line[:1].isdigit())
                 print(f"Segment {segment_id}: {len(buffer)} byte, {records} bản ghi, {chunk_index} chunk -> {path}")
 
                 await client.write_gatt_char(CONTROL_UUID, encode_ack(segment_id), response=True)

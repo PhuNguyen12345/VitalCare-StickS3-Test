@@ -83,7 +83,7 @@ void test_no_finger_sets_bio_invalid() {
     run(service, 10000, [](uint32_t) { return reading(36.5f, 0, 0, 0, 1); }, 1761550000, true);
 
     const LogRecord& record = repo.records[0];
-    TEST_ASSERT_EQUAL_UINT8(LogFlags::BIO_INVALID, record.flags);
+    TEST_ASSERT_EQUAL_UINT8(LogFlags::BIO_INVALID | LogFlags::SPO2_INVALID, record.flags);
     TEST_ASSERT_EQUAL_UINT16(0, record.heartRate);
     TEST_ASSERT_EQUAL_INT16(3650, record.temperatureX100);
 }
@@ -116,6 +116,52 @@ void test_one_record_per_window() {
     TEST_ASSERT_EQUAL(6, service.recordsWritten());
 }
 
+// Lỗi SpO2 65% gặp trên thiết bị: mẫu spo2 = 0 bị tính vào trung bình
+void test_spo2_zero_samples_are_excluded() {
+    FakeRepository repo;
+    LogService service(repo, 1000, 10000);
+    service.begin(0);
+
+    // 2/3 số mẫu spo2 = 98, 1/3 số mẫu spo2 = 0 (thuật toán chưa tính xong)
+    run(service, 10000, [](uint32_t now) {
+        return reading(33.9f, 62, (now / 1000) % 3 == 0 ? 0 : 98, 98, 3);
+    }, 1761550000, true);
+
+    const LogRecord& record = repo.records[0];
+    TEST_ASSERT_EQUAL_UINT8(98, record.spo2);
+    TEST_ASSERT_EQUAL_UINT16(62, record.heartRate);
+    TEST_ASSERT_EQUAL_UINT8(0, record.flags);
+}
+
+void test_low_confidence_samples_are_excluded() {
+    FakeRepository repo;
+    LogService service(repo, 1000, 10000);
+    service.begin(0);
+
+    // Nửa đầu độ tin cậy thấp (giá trị sai), nửa sau đạt ngưỡng
+    run(service, 10000, [](uint32_t now) {
+        return now <= 5000 ? reading(33.9f, 140, 70, 20, 3) : reading(33.9f, 70, 97, 90, 3);
+    }, 1761550000, true);
+
+    const LogRecord& record = repo.records[0];
+    TEST_ASSERT_EQUAL_UINT16(70, record.heartRate);
+    TEST_ASSERT_EQUAL_UINT8(97, record.spo2);
+    TEST_ASSERT_EQUAL_UINT8(90, record.confidence);
+}
+
+void test_heart_rate_without_spo2() {
+    FakeRepository repo;
+    LogService service(repo, 1000, 10000);
+    service.begin(0);
+
+    run(service, 10000, [](uint32_t) { return reading(33.9f, 75, 0, 95, 3); }, 1761550000, true);
+
+    const LogRecord& record = repo.records[0];
+    TEST_ASSERT_EQUAL_UINT16(75, record.heartRate);
+    TEST_ASSERT_EQUAL_UINT8(0, record.spo2);
+    TEST_ASSERT_EQUAL_UINT8(LogFlags::SPO2_INVALID, record.flags);
+}
+
 int main() {
     UNITY_BEGIN();
     RUN_TEST(test_no_record_before_window_ends);
@@ -123,5 +169,8 @@ int main() {
     RUN_TEST(test_no_finger_sets_bio_invalid);
     RUN_TEST(test_invalid_temperature_and_time);
     RUN_TEST(test_one_record_per_window);
+    RUN_TEST(test_spo2_zero_samples_are_excluded);
+    RUN_TEST(test_low_confidence_samples_are_excluded);
+    RUN_TEST(test_heart_rate_without_spo2);
     return UNITY_END();
 }

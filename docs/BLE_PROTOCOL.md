@@ -48,13 +48,15 @@ Service: **`06b40001-765e-4d79-a126-f95ef3affd61`**
 | 4 | i16 | `temperatureX100` | Nhiệt độ da × 100 (36.52 °C → `3652`). **`-32768` (0x8000) = không hợp lệ** |
 | 6 | u16 | `heartRate` | Nhịp tim (bpm) |
 | 8 | u8 | `spo2` | SpO2 (%) |
-| 9 | u8 | `confidence` | Độ tin cậy của thuật toán (%) |
+| 9 | u8 | `confidence` | Độ tin cậy của **nhịp tim** (%). Không có độ tin cậy riêng cho SpO2 |
 | 10 | u8 | `fingerStatus` | 0 = không có vật, 1 = chưa sẵn sàng, 2 = có vật, **3 = có ngón tay** |
 | 11 | u8 | `flags` | Xem [mục 3.5](#35-bit-flags-của-live-và-bản-ghi) |
 | 12 | u16 | `seq` | Tăng 1 mỗi gói, dùng để phát hiện gói bị mất |
 | 14 | u16 | — | Dự phòng, bỏ qua |
 
-Chỉ hiển thị HR/SpO2 khi bit `BIO_INVALID` **tắt**.
+Gói `live` luôn mang **giá trị thô**, kèm cờ cho biết giá trị nào dùng được (quy tắc ở [mục 3.5](#35-bit-flags-của-live-và-bản-ghi)):
+- Chỉ hiển thị nhịp tim khi bit `BIO_INVALID` **tắt**.
+- Chỉ hiển thị SpO2 khi bit `SPO2_INVALID` **tắt**.
 
 ### 3.2 `status` — 19 byte
 
@@ -111,29 +113,52 @@ Mỗi gói gồm header 5 byte và payload:
 |---|---|---|
 | `0x01` | `TIME_INVALID` | Giờ chưa được chỉnh. Với bản ghi lưu, `ts` là số giây kể từ khi thiết bị khởi động |
 | `0x02` | `TEMP_INVALID` | Không có nhiệt độ hợp lệ |
-| `0x04` | `BIO_INVALID` | Không có ngón tay hoặc chưa có mẫu HR/SpO2 hợp lệ |
+| `0x04` | `BIO_INVALID` | Nhịp tim không hợp lệ: không có ngón tay hoặc độ tin cậy thấp |
 | `0x08` | `LOOSE` | Dự phòng: cảnh báo đeo lỏng |
 | `0x10` | `ALERT` | Dự phòng: cảnh báo vượt ngưỡng |
+| `0x20` | `SPO2_INVALID` | SpO2 không hợp lệ: thuật toán chưa tính xong (`spo2 = 0`) hoặc nhịp tim không hợp lệ |
+
+Cộng các giá trị lại. Ví dụ `36` (= 4 + 32) nghĩa là không có ngón tay; `32` nghĩa là có nhịp tim nhưng chưa có SpO2.
+
+**Quy tắc đánh giá mẫu.** Thiết bị dùng **chung một quy tắc** cho màn hình, gói `live` và file CSV (`evaluateBioSample` trong [`HealthReading.h`](../lib/app_core/src/domain/HealthReading.h)):
+
+| Mẫu | Hợp lệ khi |
+|---|---|
+| Có ngón tay | Đã đọc được cảm biến và `fingerStatus == 3` |
+| Nhịp tim | Có ngón tay, `heartRate > 0` và `confidence ≥ 50` |
+| SpO2 | Nhịp tim hợp lệ và `0 < spo2 ≤ 100` |
+
+SpO2 từ cảm biến SEN-15219 chưa được hiệu chuẩn cho vỏ thiết bị, nên **chỉ dùng để tham khảo**, không dùng cho mục đích chẩn đoán.
 
 ### 3.6 Nội dung segment (CSV)
 
 Ghép các payload `DATA` của một segment sẽ được một file CSV:
 
 ```
-#v1,ts,t100,hr,spo2,conf,flags
-1761550000,3652,78,98,95,0
-1761550010,3655,80,97,92,0
-1761550020,3649,0,0,0,4
+#v2
+ts,t100,hr,spo2,conf,flags
+1761550000,3394,62,98,95,0
+1761550010,3395,64,0,92,32
+1761550020,3392,0,0,0,36
 ```
 
 | Cột | Ý nghĩa |
 |---|---|
 | `ts` | Epoch UTC (giây) ở cuối cửa sổ 10 giây |
 | `t100` | Nhiệt độ trung bình × 100 (`0` nếu `TEMP_INVALID`) |
-| `hr`, `spo2`, `conf` | Trung bình các mẫu có ngón tay (`0` nếu `BIO_INVALID`) |
+| `hr`, `conf` | Trung bình các mẫu nhịp tim hợp lệ (`0` nếu `BIO_INVALID`) |
+| `spo2` | Trung bình các mẫu SpO2 hợp lệ, tính riêng với nhịp tim (`0` nếu `SPO2_INVALID`) |
 | `flags` | Như [mục 3.5](#35-bit-flags-của-live-và-bản-ghi) |
 
-Dòng bắt đầu bằng `#` là header: `v1` là phiên bản định dạng. Mỗi segment khoảng 16 KB, tương đương khoảng 600 bản ghi hay 1,7 giờ đo.
+Hai dòng đầu là tiêu đề:
+- `#v2`: phiên bản định dạng.
+- `ts,t100,...`: tên cột, cùng số cột với dòng dữ liệu.
+
+Khi parse, bỏ qua cả hai dòng: chỉ đọc dòng bắt đầu bằng chữ số. Với pandas: `pd.read_csv(file, skiprows=1)`.
+
+Mỗi segment khoảng 16 KB, tương đương khoảng 600 bản ghi hay 1,7 giờ đo.
+
+> Định dạng `#v1` (bản đầu tiên) dồn phiên bản và tên cột vào cùng một dòng `#v1,ts,t100,...`, nên dòng tiêu đề có 7 cột trong khi dữ liệu chỉ có 6. `v1` cũng chưa có cờ `SPO2_INVALID`, và giá trị `spo2` có thể bị kéo thấp do lẫn mẫu `0`.
 
 ---
 
@@ -222,7 +247,8 @@ class LiveSample {
         flags = b.getUint8(11),
         seq = b.getUint16(12, Endian.little);
 
-  bool get bioValid => flags & 0x04 == 0;
+  bool get heartRateValid => flags & 0x04 == 0;
+  bool get spo2Valid => flags & 0x20 == 0;
 }
 
 Uint8List setTimeCommand(DateTime now) {
@@ -302,7 +328,7 @@ Future<void> connectAndSync(BluetoothDevice device) async {
 
 Lưu ý khi viết app:
 - Notify của `sync` đến liên tục. Hãy xử lý tuần tự: không gửi ACK của segment N+1 trước khi lưu xong segment N.
-- Parse CSV: bỏ dòng bắt đầu bằng `#`, tách theo dấu `,`. Mỗi dòng có đúng 6 cột.
+- Parse CSV: chỉ đọc dòng bắt đầu bằng chữ số (bỏ dòng `#v2` và dòng tên cột), tách theo dấu `,`. Mỗi dòng có đúng 6 cột.
 - `ts` là UTC. Khi hiển thị, đổi sang giờ địa phương ở phía app.
 
 ---

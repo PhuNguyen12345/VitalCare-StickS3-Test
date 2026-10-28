@@ -34,8 +34,11 @@ private:
     float temperatureSum_ = 0;
     uint16_t temperatureCount_ = 0;
 
+    // Nhịp tim và SpO2 lấy trung bình riêng (xem evaluateBioSample)
     uint32_t heartRateSum_ = 0;
-    uint32_t spo2Sum_ = 0;
     uint32_t confidenceSum_ = 0;
-    uint16_t bioCount_ = 0;
+    uint16_t heartRateCount_ = 0;
+
+    uint32_t spo2Sum_ = 0;
+    uint16_t spo2Count_ = 0;
 };

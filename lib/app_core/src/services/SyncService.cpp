@@ -265,8 +265,15 @@ void SyncService::publishLive(uint32_t nowMs, const HealthReading& reading, cons
         sample.fingerStatus = reading.fingerStatus;
     }
 
-    if (!status.senInitialized || !isBioSampleValid(reading)) {
+    // Gửi giá trị thô, cờ cho app biết giá trị nào dùng được
+    BioSampleQuality quality = evaluateBioSample(reading);
+
+    if (!status.senInitialized || !quality.heartRateValid) {
         sample.flags |= LogFlags::BIO_INVALID;
+    }
+
+    if (!status.senInitialized || !quality.spo2Valid) {
+        sample.flags |= LogFlags::SPO2_INVALID;
     }
 
     uint8_t data[LIVE_SIZE];

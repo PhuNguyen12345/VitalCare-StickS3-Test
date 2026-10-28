@@ -30,11 +30,17 @@ void LogService::addSample(const HealthReading& reading) {
         temperatureCount_++;
     }
 
-    if (isBioSampleValid(reading)) {
+    BioSampleQuality quality = evaluateBioSample(reading);
+
+    if (quality.heartRateValid) {
         heartRateSum_ += reading.heartRate;
-        spo2Sum_ += reading.spo2;
         confidenceSum_ += reading.confidence;
-        bioCount_++;
+        heartRateCount_++;
+    }
+
+    if (quality.spo2Valid) {
+        spo2Sum_ += reading.spo2;
+        spo2Count_++;
     }
 }
 
@@ -54,12 +60,17 @@ void LogService::writeRecord(uint32_t nowMs, uint32_t epochUtc, bool timeReliabl
         record.flags |= LogFlags::TEMP_INVALID;
     }
 
-    if (bioCount_ > 0) {
-        record.heartRate = (uint16_t)((heartRateSum_ + bioCount_ / 2) / bioCount_);
-        record.spo2 = (uint8_t)((spo2Sum_ + bioCount_ / 2) / bioCount_);
-        record.confidence = (uint8_t)((confidenceSum_ + bioCount_ / 2) / bioCount_);
+    if (heartRateCount_ > 0) {
+        record.heartRate = (uint16_t)((heartRateSum_ + heartRateCount_ / 2) / heartRateCount_);
+        record.confidence = (uint8_t)((confidenceSum_ + heartRateCount_ / 2) / heartRateCount_);
     } else {
         record.flags |= LogFlags::BIO_INVALID;
+    }
+
+    if (spo2Count_ > 0) {
+        record.spo2 = (uint8_t)((spo2Sum_ + spo2Count_ / 2) / spo2Count_);
+    } else {
+        record.flags |= LogFlags::SPO2_INVALID;
     }
 
     if (repository_.append(record)) {
@@ -71,7 +82,8 @@ void LogService::resetWindow() {
     temperatureSum_ = 0;
     temperatureCount_ = 0;
     heartRateSum_ = 0;
-    spo2Sum_ = 0;
     confidenceSum_ = 0;
-    bioCount_ = 0;
+    heartRateCount_ = 0;
+    spo2Sum_ = 0;
+    spo2Count_ = 0;
 }

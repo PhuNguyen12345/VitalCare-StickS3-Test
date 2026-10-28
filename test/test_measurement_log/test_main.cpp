@@ -47,10 +47,29 @@ void test_round_trip_negative_temperature_and_flags() {
 void test_parse_rejects_header_and_garbage() {
     LogRecord parsed;
     TEST_ASSERT_FALSE(parseCsvLine(LOG_CSV_HEADER, parsed));
+    TEST_ASSERT_FALSE(parseCsvLine("ts,t100,hr,spo2,conf,flags\n", parsed));
     TEST_ASSERT_FALSE(parseCsvLine("1,2,3", parsed));
     TEST_ASSERT_FALSE(parseCsvLine("1,2,3,4,5,x", parsed));
     TEST_ASSERT_FALSE(parseCsvLine("", parsed));
     TEST_ASSERT_TRUE(parseCsvLine("1,2,3,4,5,6\r\n", parsed));
+}
+
+// Dòng tên cột phải có đúng 6 cột như dòng dữ liệu
+void test_header_columns_match_record_columns() {
+    const char* columns = strchr(LOG_CSV_HEADER, '\n') + 1;
+    TEST_ASSERT_EQUAL_STRING("ts,t100,hr,spo2,conf,flags\n", columns);
+
+    LogRecord record;
+    char line[48];
+    formatCsvLine(record, line, sizeof(line));
+
+    int headerCommas = 0;
+    int lineCommas = 0;
+    for (const char* c = columns; *c; c++) headerCommas += *c == ',';
+    for (const char* c = line; *c; c++) lineCommas += *c == ',';
+
+    TEST_ASSERT_EQUAL(lineCommas, headerCommas);
+    TEST_ASSERT_EQUAL_STRING_LEN("#v2\n", LOG_CSV_HEADER, 4);
 }
 
 int main() {
@@ -59,5 +78,6 @@ int main() {
     RUN_TEST(test_format_rejects_small_buffer);
     RUN_TEST(test_round_trip_negative_temperature_and_flags);
     RUN_TEST(test_parse_rejects_header_and_garbage);
+    RUN_TEST(test_header_columns_match_record_columns);
     return UNITY_END();
 }

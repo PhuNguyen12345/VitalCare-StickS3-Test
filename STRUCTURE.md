@@ -127,6 +127,7 @@ m5sticks3-health-device/
     ├── test_app_state/
     ├── test_time_epoch/                (*)
     ├── test_measurement_log/           (*)
+    ├── test_sample_quality/            (*)
     ├── test_ble_protocol/              (*)
     ├── test_log_service/               (*)
     ├── test_sync_service/              (*)
