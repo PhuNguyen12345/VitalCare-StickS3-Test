@@ -37,7 +37,7 @@ size_t encodeLive(const LiveSample& sample, uint8_t* out) {
     cursor = putLE(cursor, sample.fingerStatus);
     cursor = putLE(cursor, sample.flags);
     cursor = putLE(cursor, sample.seq);
-    cursor = putLE(cursor, (uint16_t)0);
+    cursor = putLE(cursor, (uint16_t)sample.bodyTemperatureX100);
 
     return cursor - out;
 }
@@ -107,6 +107,16 @@ bool decodeControl(const uint8_t* data, size_t length, ControlCommand& out) {
 
             out.op = ControlOp::SyncAck;
             out.segmentId = getLE<uint16_t>(data + 1);
+            return true;
+
+        case ControlOp::SetTempOffset:
+        case ControlOp::CalibrateTemp:
+            if (length < 3) {
+                return false;
+            }
+
+            out.op = (ControlOp)data[0];
+            out.valueX100 = (int16_t)getLE<uint16_t>(data + 1);
             return true;
 
         case ControlOp::SyncStart:

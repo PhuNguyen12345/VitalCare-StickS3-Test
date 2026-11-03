@@ -6,12 +6,14 @@ App::App(
     TimeService* timeService,
     MeasurementService* measurementService,
     LogService* logService,
-    SyncService* syncService
+    SyncService* syncService,
+    BodyTemperatureEstimator* temperatureEstimator
 )
     : timeService_(timeService),
       measurementService_(measurementService),
       logService_(logService),
-      syncService_(syncService) {}
+      syncService_(syncService),
+      temperatureEstimator_(temperatureEstimator) {}
 
 void App::begin(uint32_t nowMs) {
     // Khởi tạo SEN trước (theo thứ tự đã thêm vào MeasurementService), rồi tới RTC
@@ -21,6 +23,10 @@ void App::begin(uint32_t nowMs) {
 
     if (timeService_ != nullptr) {
         timeService_->begin(nowMs);
+    }
+
+    if (temperatureEstimator_ != nullptr) {
+        temperatureEstimator_->begin(nowMs);
     }
 
     if (logService_ != nullptr) {
@@ -46,8 +52,18 @@ void App::update(uint32_t nowMs) {
         reading = measurementService_->reading();
     }
 
+    if (temperatureEstimator_ != nullptr) {
+        temperatureEstimator_->update(nowMs, reading);
+    }
+
     if (logService_ != nullptr && timeService_ != nullptr) {
-        logService_->update(nowMs, reading, timeService_->epochUtc(), timeService_->time().reliable);
+        logService_->update(
+            nowMs,
+            reading,
+            bodyTemperature(),
+            timeService_->epochUtc(),
+            timeService_->time().reliable
+        );
     }
 
     if (syncService_ != nullptr) {
@@ -97,6 +113,7 @@ AppViewModel App::viewModel() const {
     }
 
     model.status = deviceStatus();
+    model.bodyTemperature = bodyTemperature();
 
     return model;
 }
@@ -154,4 +171,8 @@ void App::log(const char* message) const {
     if (logger_ != nullptr) {
         logger_(message);
     }
+}
+
+BodyTemperature App::bodyTemperature() const {
+    return temperatureEstimator_ != nullptr ? temperatureEstimator_->current() : BodyTemperature();
 }

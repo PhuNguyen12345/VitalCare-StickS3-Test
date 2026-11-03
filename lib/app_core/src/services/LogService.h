@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 
+#include "domain/BodyTemperature.h"
 #include "domain/HealthReading.h"
 #include "domain/MeasurementLog.h"
 #include "ports/ILogRepository.h"
@@ -13,14 +14,21 @@ public:
 
     void begin(uint32_t nowMs);
 
-    // epochUtc = 0 nếu chưa đọc được giờ; timeReliable = giờ đã được chỉnh
-    void update(uint32_t nowMs, const HealthReading& reading, uint32_t epochUtc, bool timeReliable);
+    // body: nhiệt độ cơ thể ước tính tại thời điểm update.
+    // epochUtc = 0 nếu chưa đọc được giờ; timeReliable = giờ đã được chỉnh.
+    void update(
+        uint32_t nowMs,
+        const HealthReading& reading,
+        const BodyTemperature& body,
+        uint32_t epochUtc,
+        bool timeReliable
+    );
 
     uint32_t recordsWritten() const { return recordsWritten_; }
 
 private:
     void addSample(const HealthReading& reading);
-    void writeRecord(uint32_t nowMs, uint32_t epochUtc, bool timeReliable);
+    void writeRecord(uint32_t nowMs, const BodyTemperature& body, uint32_t epochUtc, bool timeReliable);
     void resetWindow();
 
     ILogRepository& repository_;

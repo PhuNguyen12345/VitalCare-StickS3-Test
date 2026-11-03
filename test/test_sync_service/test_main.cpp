@@ -370,7 +370,12 @@ void test_live_every_second_only_when_connected() {
     TEST_ASSERT_EQUAL(LIVE_SIZE, p.size());
     TEST_ASSERT_EQUAL_UINT32(1761550000, u32(p, 0));
     TEST_ASSERT_EQUAL_INT16(3652, (int16_t)u16(p, 4));
-    TEST_ASSERT_EQUAL_UINT8(LogFlags::BIO_INVALID | LogFlags::SPO2_INVALID, p[11]);  // SEN chưa sẵn sàng
+    // SEN chưa sẵn sàng, chưa gắn bộ ước tính nhiệt độ
+    TEST_ASSERT_EQUAL_UINT8(
+        LogFlags::BIO_INVALID | LogFlags::SPO2_INVALID | LogFlags::TEMP_UNSTABLE | LogFlags::TEMP_UNCALIBRATED,
+        p[11]
+    );
+    TEST_ASSERT_EQUAL_INT16(BleProtocol::TEMP_INVALID, (int16_t)u16(p, 14));
     TEST_ASSERT_EQUAL_UINT16(2, u16(p, 12));                // seq
 
     f.link.connected = false;
@@ -411,7 +416,67 @@ void test_live_sends_raw_values_with_quality_flags() {
     const Packet& p = f.link.live.back();
     TEST_ASSERT_EQUAL_UINT16(62, u16(p, 6));
     TEST_ASSERT_EQUAL_UINT8(0, p[8]);
-    TEST_ASSERT_EQUAL_UINT8(LogFlags::TEMP_INVALID | LogFlags::SPO2_INVALID, p[11]);
+    TEST_ASSERT_EQUAL_UINT8(
+        LogFlags::TEMP_INVALID | LogFlags::SPO2_INVALID | LogFlags::TEMP_UNSTABLE | LogFlags::TEMP_UNCALIBRATED,
+        p[11]
+    );
+}
+
+// Bộ ước tính đã ổn định ở da 34.17 °C (cấp mẫu mỗi 10 giây trong 4 phút)
+static void warmUp(BodyTemperatureEstimator& estimator) {
+    HealthReading skin;
+    skin.temperatureValid = true;
+    skin.temperatureC = 34.17f;
+
+    estimator.begin(0);
+    for (uint32_t now = 0; now <= 240000; now += 10000) {
+        estimator.update(now, skin);
+    }
+}
+
+void test_live_carries_body_temperature() {
+    Fixture f;
+    BodyTemperatureEstimator estimator(nullptr);
+    warmUp(estimator);
+    f.sync.setTemperatureEstimator(&estimator);
+
+    f.reading.temperatureValid = true;
+    f.reading.temperatureC = 34.17f;
+    f.step(100);
+
+    const Packet& p = f.link.live.back();
+    TEST_ASSERT_EQUAL_INT16(3417, (int16_t)u16(p, 4));
+    TEST_ASSERT_EQUAL_INT16(3637, (int16_t)u16(p, 14));  // 34.17 + 2.2 mặc định
+    TEST_ASSERT_EQUAL_UINT8(0, p[11] & LogFlags::TEMP_UNSTABLE);
+    TEST_ASSERT_NOT_EQUAL(0, p[11] & LogFlags::TEMP_UNCALIBRATED);
+}
+
+void test_calibrate_command_sets_offset_and_status_flag() {
+    Fixture f;
+    BodyTemperatureEstimator estimator(nullptr);
+    warmUp(estimator);
+    f.sync.setTemperatureEstimator(&estimator);
+
+    ControlCommand command;
+    command.op = ControlOp::CalibrateTemp;
+    command.valueX100 = 3640;  // Nhiệt kế đo miệng 36.40 °C
+    f.link.commands.push_back(command);
+    f.step();
+
+    TEST_ASSERT_TRUE(estimator.current().calibrated);
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, 2.23f, estimator.current().offsetC);
+
+    const Packet& status = f.link.status.back();
+    TEST_ASSERT_NOT_EQUAL(0, status[1] & StatusFlags::TEMP_CALIBRATED);
+
+    // Về độ lệch mặc định
+    command.op = ControlOp::SetTempOffset;
+    command.valueX100 = BleProtocol::TEMP_INVALID;
+    f.link.commands.push_back(command);
+    f.step();
+
+    TEST_ASSERT_FALSE(estimator.current().calibrated);
+    TEST_ASSERT_EQUAL(0, f.link.status.back()[1] & StatusFlags::TEMP_CALIBRATED);
 }
 
 int main() {
@@ -426,5 +491,7 @@ int main() {
     RUN_TEST(test_live_every_second_only_when_connected);
     RUN_TEST(test_set_time_writes_rtc_and_timezone);
     RUN_TEST(test_live_sends_raw_values_with_quality_flags);
+    RUN_TEST(test_live_carries_body_temperature);
+    RUN_TEST(test_calibrate_command_sets_offset_and_status_flag);
     return UNITY_END();
 }

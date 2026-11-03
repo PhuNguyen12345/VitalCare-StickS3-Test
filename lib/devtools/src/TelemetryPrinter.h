@@ -9,7 +9,7 @@
 #include "app/AppViewModel.h"
 
 // In số liệu mỗi chu kỳ: dòng log dễ đọc + dòng @DATA cho simulator
-//   @DATA rtc=10:00:00 temp=36.52 hr=78 spo2=98 conf=95 status=3 sen=1 bat=87 ble=1 sync=0 logseg=3
+//   @DATA rtc=10:00:00 temp=34.17 body=36.37 tstate=stable tcal=0 hr=78 spo2=98 conf=95 status=3 sen=1 bat=87 ble=1 sync=0 logseg=3
 //         page=clock mirror=1
 class TelemetryPrinter {
 public:

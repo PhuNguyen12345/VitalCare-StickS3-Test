@@ -7,6 +7,7 @@
 #include "ports/IConnectivity.h"
 #include "ports/ILogRepository.h"
 #include "protocol/BleProtocol.h"
+#include "services/BodyTemperatureEstimator.h"
 #include "services/TimeService.h"
 
 // Gửi dữ liệu realtime, trạng thái, và đồng bộ batch các segment log về điện thoại
@@ -24,6 +25,9 @@ public:
     );
 
     void setLogger(LogFn logger) { logger_ = logger; }
+
+    // Nhiệt độ cơ thể cho gói live và lệnh hiệu chuẩn (có thể không gắn)
+    void setTemperatureEstimator(BodyTemperatureEstimator* estimator) { temperature_ = estimator; }
 
     bool begin();
     void update(uint32_t nowMs, const HealthReading& reading, const DeviceStatus& status);
@@ -52,10 +56,12 @@ private:
     void publishLive(uint32_t nowMs, const HealthReading& reading, const DeviceStatus& status);
     void publishStatus(uint32_t nowMs, const DeviceStatus& status);
     void log(const char* message) const;
+    BodyTemperature bodyTemperature() const;
 
     IConnectivity& link_;
     ILogRepository& repository_;
     TimeService& timeService_;
+    BodyTemperatureEstimator* temperature_ = nullptr;
 
     uint32_t liveIntervalMs_;
     uint32_t statusIntervalMs_;

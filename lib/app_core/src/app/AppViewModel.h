@@ -1,6 +1,7 @@
 #pragma once
 
 #include "app/AppState.h"
+#include "domain/BodyTemperature.h"
 #include "domain/DeviceStatus.h"
 #include "domain/HealthReading.h"
 #include "domain/TimeInfo.h"
@@ -10,5 +11,6 @@ struct AppViewModel {
     ScreenPage page = ScreenPage::Clock;
     TimeInfo time;
     HealthReading reading;
+    BodyTemperature bodyTemperature;
     DeviceStatus status;
 };

@@ -2,7 +2,7 @@
 
 Tài liệu cho nhóm phát triển app điện thoại (Flutter). Mô tả cách app kết nối với thiết bị VitalCare, nhận số liệu thời gian thực, chỉnh giờ và đồng bộ dữ liệu đã lưu.
 
-- Phiên bản giao thức: **1** (byte đầu của gói `status`)
+- Phiên bản giao thức: **2** (byte đầu của gói `status`). v2 thêm nhiệt độ cơ thể ước tính và lệnh hiệu chuẩn nhiệt độ
 - Mã nguồn tham chiếu: [`lib/app_core/src/protocol/BleProtocol.h`](../lib/app_core/src/protocol/BleProtocol.h), [`include/BleConfig.h`](../include/BleConfig.h)
 - Client mẫu chạy trên máy tính: [`tools/ble_client.py`](../tools/ble_client.py)
 
@@ -45,25 +45,26 @@ Service: **`06b40001-765e-4d79-a126-f95ef3affd61`**
 | Offset | Kiểu | Trường | Ghi chú |
 |---|---|---|---|
 | 0 | u32 | `epochUtc` | Giây từ 1970-01-01 UTC. `0` nếu chưa đọc được giờ |
-| 4 | i16 | `temperatureX100` | Nhiệt độ da × 100 (36.52 °C → `3652`). **`-32768` (0x8000) = không hợp lệ** |
+| 4 | i16 | `skinTemperatureX100` | Nhiệt độ **da** (thô) × 100 (34.17 °C → `3417`). **`-32768` (0x8000) = không hợp lệ** |
 | 6 | u16 | `heartRate` | Nhịp tim (bpm) |
 | 8 | u8 | `spo2` | SpO2 (%) |
 | 9 | u8 | `confidence` | Độ tin cậy của **nhịp tim** (%). Không có độ tin cậy riêng cho SpO2 |
 | 10 | u8 | `fingerStatus` | 0 = không có vật, 1 = chưa sẵn sàng, 2 = có vật, **3 = có ngón tay** |
 | 11 | u8 | `flags` | Xem [mục 3.5](#35-bit-flags-của-live-và-bản-ghi) |
 | 12 | u16 | `seq` | Tăng 1 mỗi gói, dùng để phát hiện gói bị mất |
-| 14 | u16 | — | Dự phòng, bỏ qua |
+| 14 | i16 | `bodyTemperatureX100` | Nhiệt độ **cơ thể ước tính** × 100 (xem [mục 3.7](#37-nhiệt-độ-cơ-thể-ước-tính)). **`-32768` = chưa có** (chưa cân bằng nhiệt / không đeo) |
 
 Gói `live` luôn mang **giá trị thô**, kèm cờ cho biết giá trị nào dùng được (quy tắc ở [mục 3.5](#35-bit-flags-của-live-và-bản-ghi)):
 - Chỉ hiển thị nhịp tim khi bit `BIO_INVALID` **tắt**.
 - Chỉ hiển thị SpO2 khi bit `SPO2_INVALID` **tắt**.
+- Chỉ hiển thị nhiệt độ cơ thể khi bit `TEMP_UNSTABLE` **tắt**. Nếu bit `TEMP_UNCALIBRATED` bật, ghi chú "chưa hiệu chuẩn".
 
 ### 3.2 `status` — 19 byte
 
 | Offset | Kiểu | Trường | Ghi chú |
 |---|---|---|---|
-| 0 | u8 | `protocolVersion` | Hiện là `1` |
-| 1 | u8 | `flags` | `0x01` RTC_VALID, `0x02` SEN_READY, `0x04` SYNCING, `0x08` LOG_OVERFLOW |
+| 0 | u8 | `protocolVersion` | Hiện là `2` |
+| 1 | u8 | `flags` | `0x01` RTC_VALID, `0x02` SEN_READY, `0x04` SYNCING, `0x08` LOG_OVERFLOW, `0x10` TEMP_CALIBRATED |
 | 2 | u8 | `battery` | Pin (%) |
 | 3 | u32 | `epochUtc` | Giờ hiện tại của thiết bị |
 | 7 | i16 | `tzMinutes` | Múi giờ đang dùng (phút, Việt Nam = `420`) |
@@ -75,6 +76,7 @@ Thiết bị gửi notify khi trạng thái thay đổi, và ít nhất 5 giây 
 
 - `RTC_VALID` tắt: giờ thiết bị chưa đúng. App nên gửi `SET_TIME`.
 - `LOG_OVERFLOW` bật: bộ nhớ từng bị đầy và dữ liệu cũ nhất đã bị xóa. Cờ tự tắt khi đã đồng bộ hết.
+- `TEMP_CALIBRATED` bật: độ lệch nhiệt độ đã được hiệu chuẩn (không dùng giá trị mặc định).
 
 ### 3.3 `control` — app ghi xuống
 
@@ -87,8 +89,15 @@ Byte đầu là opcode, phần còn lại là payload.
 | `0x03` | `SYNC_ACK` | u16 `segmentId` | 3 byte | Xác nhận đã nhận đúng segment; thiết bị xóa segment đó và gửi segment kế tiếp |
 | `0x04` | `SYNC_ABORT` | — | 1 byte | Dừng đồng bộ (segment chưa ACK được giữ lại) |
 | `0x05` | `CLEAR_LOG` | — | 1 byte | **Xóa toàn bộ dữ liệu đã lưu.** Chỉ dùng khi debug |
+| `0x06` | `SET_TEMP_OFFSET` | i16 `offsetX100` | 3 byte | Đặt trực tiếp độ lệch nhiệt độ (0–8 °C). `-32768` = về độ lệch mặc định |
+| `0x07` | `CALIBRATE_TEMP` | i16 `referenceX100` | 3 byte | Hiệu chuẩn: gửi nhiệt độ **đo miệng bằng nhiệt kế**; thiết bị tính độ lệch = tham chiếu − nhiệt độ da. Bị từ chối nếu chưa cân bằng nhiệt |
 
-Ví dụ `SET_TIME` với epoch `0x12345678` và múi giờ −300 phút: `01 78 56 34 12 D4 FE`.
+Ví dụ:
+- `SET_TIME` với epoch `0x12345678` và múi giờ −300 phút: `01 78 56 34 12 D4 FE`.
+- `CALIBRATE_TEMP` với nhiệt kế đo 36,40 °C: `07 38 0E`.
+- `SET_TEMP_OFFSET` 2,20 °C: `06 DC 00`; về mặc định: `06 00 80`.
+
+Kết quả hiệu chuẩn: đọc cờ `TEMP_CALIBRATED` trong `status`, và `bodyTemperatureX100` trong `live`.
 
 ### 3.4 `sync` — thiết bị gửi lên
 
@@ -114,11 +123,13 @@ Mỗi gói gồm header 5 byte và payload:
 | `0x01` | `TIME_INVALID` | Giờ chưa được chỉnh. Với bản ghi lưu, `ts` là số giây kể từ khi thiết bị khởi động |
 | `0x02` | `TEMP_INVALID` | Không có nhiệt độ hợp lệ |
 | `0x04` | `BIO_INVALID` | Nhịp tim không hợp lệ: không có ngón tay hoặc độ tin cậy thấp |
-| `0x08` | `LOOSE` | Dự phòng: cảnh báo đeo lỏng |
+| `0x08` | `LOOSE` | Không đeo hoặc đeo lỏng: nhiệt độ da dưới 30 °C |
 | `0x10` | `ALERT` | Dự phòng: cảnh báo vượt ngưỡng |
 | `0x20` | `SPO2_INVALID` | SpO2 không hợp lệ: thuật toán chưa tính xong (`spo2 = 0`) hoặc nhịp tim không hợp lệ |
+| `0x40` | `TEMP_UNSTABLE` | Chưa có nhiệt độ cơ thể: chưa cân bằng nhiệt hoặc không đeo |
+| `0x80` | `TEMP_UNCALIBRATED` | Nhiệt độ cơ thể dùng độ lệch mặc định, chưa hiệu chuẩn |
 
-Cộng các giá trị lại. Ví dụ `36` (= 4 + 32) nghĩa là không có ngón tay; `32` nghĩa là có nhịp tim nhưng chưa có SpO2.
+Cộng các giá trị lại. Ví dụ `36` (= 4 + 32) nghĩa là không có ngón tay; `128` nghĩa là mọi chỉ số đều có, nhưng nhiệt độ cơ thể chưa được hiệu chuẩn.
 
 **Quy tắc đánh giá mẫu.** Thiết bị dùng **chung một quy tắc** cho màn hình, gói `live` và file CSV (`evaluateBioSample` trong [`HealthReading.h`](../lib/app_core/src/domain/HealthReading.h)):
 
@@ -135,30 +146,51 @@ SpO2 từ cảm biến SEN-15219 chưa được hiệu chuẩn cho vỏ thiết 
 Ghép các payload `DATA` của một segment sẽ được một file CSV:
 
 ```
-#v2
-ts,t100,hr,spo2,conf,flags
-1761550000,3394,62,98,95,0
-1761550010,3395,64,0,92,32
-1761550020,3392,0,0,0,36
+#v3
+ts,t100,tb100,hr,spo2,conf,flags
+1761550000,3417,3637,62,98,95,128
+1761550010,3416,3636,64,0,92,160
+1761550020,3360,0,0,0,0,228
 ```
 
 | Cột | Ý nghĩa |
 |---|---|
 | `ts` | Epoch UTC (giây) ở cuối cửa sổ 10 giây |
-| `t100` | Nhiệt độ trung bình × 100 (`0` nếu `TEMP_INVALID`) |
+| `t100` | Nhiệt độ **da** trung bình × 100 (`0` nếu `TEMP_INVALID`) |
+| `tb100` | Nhiệt độ **cơ thể ước tính** × 100 lúc ghi bản ghi (`0` nếu `TEMP_UNSTABLE`) |
 | `hr`, `conf` | Trung bình các mẫu nhịp tim hợp lệ (`0` nếu `BIO_INVALID`) |
 | `spo2` | Trung bình các mẫu SpO2 hợp lệ, tính riêng với nhịp tim (`0` nếu `SPO2_INVALID`) |
 | `flags` | Như [mục 3.5](#35-bit-flags-của-live-và-bản-ghi) |
 
 Hai dòng đầu là tiêu đề:
-- `#v2`: phiên bản định dạng.
-- `ts,t100,...`: tên cột, cùng số cột với dòng dữ liệu.
+- `#v3`: phiên bản định dạng.
+- `ts,t100,tb100,...`: tên cột, cùng số cột (7) với dòng dữ liệu.
 
 Khi parse, bỏ qua cả hai dòng: chỉ đọc dòng bắt đầu bằng chữ số. Với pandas: `pd.read_csv(file, skiprows=1)`.
 
 Mỗi segment khoảng 16 KB, tương đương khoảng 600 bản ghi hay 1,7 giờ đo.
 
-> Định dạng `#v1` (bản đầu tiên) dồn phiên bản và tên cột vào cùng một dòng `#v1,ts,t100,...`, nên dòng tiêu đề có 7 cột trong khi dữ liệu chỉ có 6. `v1` cũng chưa có cờ `SPO2_INVALID`, và giá trị `spo2` có thể bị kéo thấp do lẫn mẫu `0`.
+> Định dạng cũ — app nên đọc dòng `#vN` để chọn cách parse:
+> - `#v2`: 6 cột `ts,t100,hr,spo2,conf,flags` (chưa có `tb100`, chưa có cờ nhiệt độ cơ thể).
+> - `#v1`: dồn phiên bản và tên cột vào một dòng `#v1,ts,t100,...`; chưa có cờ `SPO2_INVALID`, `spo2` có thể bị kéo thấp do lẫn mẫu `0`.
+
+### 3.7 Nhiệt độ cơ thể ước tính
+
+MAX30205 đo **nhiệt độ da cổ tay**. Thiết bị ước tính nhiệt độ cơ thể, định nghĩa là **tương đương nhiệt độ đo ở miệng** (mốc tham chiếu: trung bình 36,57 °C, Geneva và cộng sự 2019):
+
+```
+nhiệt độ cơ thể = trung bình nhiệt độ da 1 phút gần nhất + độ lệch
+```
+
+| Trạng thái | Điều kiện | `bodyTemperatureX100` / `tb100` | Cờ |
+|---|---|---|---|
+| Không đeo | Nhiệt độ da < 30 °C | không có | `TEMP_UNSTABLE`, `LOOSE` |
+| Đang cân bằng | Đang đeo, chưa đủ 3 phút dữ liệu, hoặc độ dốc > 0,05 °C/phút | không có | `TEMP_UNSTABLE` |
+| Đã cân bằng | Độ dốc trong 3 phút gần nhất ≤ 0,05 °C/phút | có | — |
+
+- **Độ lệch mặc định** là **2,2 °C**, đo thực nghiệm ngày 2026-11-03 trên 1 người (xem [temperature_calibration.csv](temperature_calibration.csv)). Khi dùng giá trị này, cờ `TEMP_UNCALIBRATED` bật.
+- **Hiệu chuẩn theo bệnh nhân** (gợi ý cho nghiệp vụ check-in của Healthcare Staff): đeo thiết bị ít nhất 15 phút, đo miệng bằng nhiệt kế, rồi gửi `CALIBRATE_TEMP`. Độ lệch được lưu trên thiết bị, giữ nguyên qua các lần khởi động.
+- **Hiển thị:** làm tròn 0,1 °C và ghi rõ là **nhiệt độ ước tính**. Đây không phải số đo của nhiệt kế y tế.
 
 ---
 
@@ -229,7 +261,8 @@ final statusUuid = Guid('06b40005-765e-4d79-a126-f95ef3affd61');
 
 class LiveSample {
   final int epochUtc;
-  final double? temperature; // null nếu không hợp lệ
+  final double? temperature;     // nhiệt độ da; null nếu không hợp lệ
+  final double? bodyTemperature; // nhiệt độ cơ thể ước tính; null nếu chưa có
   final int heartRate, spo2, confidence, fingerStatus, flags, seq;
 
   LiveSample.fromBytes(List<int> value)
@@ -245,10 +278,14 @@ class LiveSample {
         confidence = b.getUint8(9),
         fingerStatus = b.getUint8(10),
         flags = b.getUint8(11),
-        seq = b.getUint16(12, Endian.little);
+        seq = b.getUint16(12, Endian.little),
+        bodyTemperature = b.getInt16(14, Endian.little) == -32768
+            ? null
+            : b.getInt16(14, Endian.little) / 100.0;
 
   bool get heartRateValid => flags & 0x04 == 0;
   bool get spo2Valid => flags & 0x20 == 0;
+  bool get bodyTemperatureCalibrated => flags & 0x80 == 0;
 }
 
 Uint8List setTimeCommand(DateTime now) {
@@ -328,7 +365,7 @@ Future<void> connectAndSync(BluetoothDevice device) async {
 
 Lưu ý khi viết app:
 - Notify của `sync` đến liên tục. Hãy xử lý tuần tự: không gửi ACK của segment N+1 trước khi lưu xong segment N.
-- Parse CSV: chỉ đọc dòng bắt đầu bằng chữ số (bỏ dòng `#v2` và dòng tên cột), tách theo dấu `,`. Mỗi dòng có đúng 6 cột.
+- Parse CSV: đọc dòng `#vN` để biết phiên bản; chỉ đọc dòng bắt đầu bằng chữ số (bỏ dòng tên cột), tách theo dấu `,`. Định dạng `#v3` có đúng 7 cột.
 - `ts` là UTC. Khi hiển thị, đổi sang giờ địa phương ở phía app.
 
 ---
@@ -342,6 +379,7 @@ python3 tools/ble_client.py scan       # thấy VitalCare-XXXX
 python3 tools/ble_client.py settime    # chỉnh giờ theo máy tính
 python3 tools/ble_client.py live       # in số liệu realtime
 python3 tools/ble_client.py sync       # đồng bộ, lưu CSV vào ble_logs/
+python3 tools/ble_client.py calibrate --ref 36.4   # hiệu chuẩn bằng nhiệt kế đo miệng
 python3 tools/ble_client.py selftest   # kiểm tra bộ giải mã với vector của firmware
 ```
 

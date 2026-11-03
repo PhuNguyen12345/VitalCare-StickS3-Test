@@ -71,7 +71,7 @@ Chi tiết trong [STRUCTURE.md](STRUCTURE.md).
   - Mỗi 10 giây ghi một bản ghi trung bình.
   - Mỗi segment là một file `/log/NNNNN.csv`, tối đa khoảng 16KB.
   - Segment đóng khi app gửi `SYNC_START`, khi đầy, hoặc **mỗi lần khởi động lại**.
-  - Định dạng CSV hiện tại là `#v2` (dòng phiên bản tách riêng với dòng tên cột).
+  - Định dạng CSV hiện tại là `#v3`: `ts,t100,tb100,hr,spo2,conf,flags` (`t100` = da thô, `tb100` = cơ thể ước tính). Giao thức BLE phiên bản 2.
 - **Thời gian:**
   - RTC lưu **UTC**; múi giờ lưu trong NVS (mặc định +420). App chỉnh giờ bằng lệnh `SET_TIME`.
   - `ts` là epoch, **không phải id**. Khóa đề xuất cho backend là `(mã thiết bị, ts)`.
@@ -80,6 +80,10 @@ Chi tiết trong [STRUCTURE.md](STRUCTURE.md).
   - SpO2 hợp lệ khi nhịp tim hợp lệ **và** `0 < spo2 ≤ 100`.
   - `conf` là độ tin cậy của **nhịp tim**.
   - Cờ: `BIO_INVALID` (4), `SPO2_INVALID` (32).
+- **Nhiệt độ cơ thể ước tính:** `BodyTemperatureEstimator` + `TemperatureThresholds` trong [BodyTemperature.h](lib/app_core/src/domain/BodyTemperature.h). Dùng chung cho màn hình, gói `live` (byte 14) và CSV (`tb100`).
+  - Cơ thể = trung bình da 1 phút + độ lệch (mặc định 2,2 °C), chỉ khi **đã cân bằng**: độ dốc 3 phút ≤ 0,05 °C/phút. Da < 30 °C thì coi là không đeo.
+  - Cờ: `LOOSE` (8, không đeo), `TEMP_UNSTABLE` (64), `TEMP_UNCALIBRATED` (128).
+  - Hiệu chuẩn bằng lệnh BLE `CALIBRATE_TEMP` (nhiệt độ miệng tham chiếu) hoặc `SET_TEMP_OFFSET`; độ lệch lưu NVS. Công cụ: `ble_client.py calibrate --ref 36.4`.
 - **Nghiệp vụ:**
   - **Đo định kỳ**, không cần đo liên tục.
   - **Pin mục tiêu 3–4 ngày.**
@@ -98,11 +102,11 @@ Chi tiết trong [STRUCTURE.md](STRUCTURE.md).
 
 Plan chi tiết và câu hỏi còn mở: [docs/PLAN_POWER_AND_MODES.md](docs/PLAN_POWER_AND_MODES.md).
 
-- **Đã xong:** refactor theo STRUCTURE.md, simulator, BLE realtime + batch (đã chạy thật trên thiết bị), quy tắc đánh giá mẫu, tiêu đề CSV `#v2`.
+- **Đã xong:** refactor theo STRUCTURE.md, simulator, BLE realtime + batch (đã chạy thật trên thiết bị), quy tắc đánh giá mẫu, nhiệt độ cơ thể ước tính A3–A5 (CSV `#v3`, giao thức v2; **chưa chạy thử trên thiết bị**).
 - **Đang làm — bước 0, chuẩn hóa nhiệt độ cơ thể:**
-  - Việc kế tiếp: thêm `ble_client.py live --csv`, để làm thí nghiệm A1 (tự sinh nhiệt) và A2 (thời gian cân bằng nhiệt).
-  - Sau đó: phát hiện cân bằng nhiệt, phát hiện không đeo, nhiệt độ ước tính kèm cờ (CSV `#v3`).
-  - Chưa có nhiệt kế y tế. Nếu mua, nên chọn nhiệt kế điện tử đo miệng, hoặc nhiệt kế hồng ngoại đo tai; **không dùng loại đo trán**.
+  - Việc kế tiếp: nạp và kiểm tra A3–A5 trên thiết bị; thu thêm số liệu hiệu chuẩn (nhiều người, nhiều điều kiện) để chốt độ lệch và ngưỡng.
+  - Còn lại: `ble_client.py live --csv` cho thí nghiệm A1 (tự sinh nhiệt) và đường cong cân bằng đầy đủ (A2).
+  - Đã có nhiệt kế điện tử đo miệng. Mốc tham chiếu: **nhiệt độ miệng, trung bình 36,57 °C** (Geneva 2019). Số đo hiệu chuẩn ghi trong [docs/temperature_calibration.csv](docs/temperature_calibration.csv); độ lệch tạm thời (miệng − cổ tay) khoảng **2,2 °C**, từ 2 lần đo khi cảm biến **đã cân bằng nhiệt**. Chỉ dùng các dòng ghi chú `da can bang`.
 - **Sau đó:** đo dòng tiêu thụ, rồi ngủ sâu + đo định kỳ + cửa sổ BLE; phiên live bằng nút bấm; cảnh báo; định danh thiết bị.
 - **Đang chờ nhóm quyết định:** chu kỳ đo, nút SOS, chu kỳ đo thích ứng, phát hiện té ngã bằng IMU.
 

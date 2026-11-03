@@ -133,6 +133,39 @@ void SyncService::handleCommand(const ControlCommand& command, uint32_t nowMs) {
             repository_.clear();
             state_ = State::Idle;
             break;
+
+        case ControlOp::SetTempOffset:
+            if (temperature_ == nullptr) {
+                break;
+            }
+
+            if (command.valueX100 == BleProtocol::TEMP_INVALID) {
+                temperature_->resetOffset();
+                log("Temp: offset reset to default");
+            } else {
+                bool ok = temperature_->setOffset(command.valueX100 / 100.0f);
+                snprintf(message, sizeof(message), "Temp: set offset %.2f C %s", command.valueX100 / 100.0f, ok ? "OK" : "REJECTED");
+                log(message);
+            }
+            break;
+
+        case ControlOp::CalibrateTemp: {
+            if (temperature_ == nullptr) {
+                break;
+            }
+
+            // Từ chối nếu chưa cân bằng nhiệt hoặc độ lệch không hợp lý
+            bool ok = temperature_->calibrate(command.valueX100 / 100.0f);
+
+            if (ok) {
+                snprintf(message, sizeof(message), "Temp: calibrated, offset %.2f C", temperature_->current().offsetC);
+            } else {
+                snprintf(message, sizeof(message), "Temp: calibration REJECTED (not stable or bad reference)");
+            }
+
+            log(message);
+            break;
+        }
     }
 
     (void)nowMs;
@@ -252,11 +285,17 @@ void SyncService::publishLive(uint32_t nowMs, const HealthReading& reading, cons
         sample.flags |= LogFlags::TIME_INVALID;
     }
 
+    BodyTemperature body = bodyTemperature();
+
     if (reading.temperatureValid) {
         sample.temperatureX100 = (int16_t)lroundf(reading.temperatureC * 100.0f);
-    } else {
-        sample.flags |= LogFlags::TEMP_INVALID;
     }
+
+    if (body.stable()) {
+        sample.bodyTemperatureX100 = (int16_t)lroundf(body.bodyC * 100.0f);
+    }
+
+    sample.flags |= temperatureFlags(reading.temperatureValid, body);
 
     if (status.senInitialized && reading.bioValid) {
         sample.heartRate = reading.heartRate;
@@ -308,6 +347,10 @@ void SyncService::publishStatus(uint32_t nowMs, const DeviceStatus& status) {
         packet.flags |= StatusFlags::LOG_OVERFLOW;
     }
 
+    if (bodyTemperature().calibrated) {
+        packet.flags |= StatusFlags::TEMP_CALIBRATED;
+    }
+
     uint8_t data[STATUS_SIZE];
     encodeStatus(packet, data);
 
@@ -328,4 +371,8 @@ void SyncService::log(const char* message) const {
     if (logger_ != nullptr) {
         logger_(message);
     }
+}
+
+BodyTemperature SyncService::bodyTemperature() const {
+    return temperature_ != nullptr ? temperature_->current() : BodyTemperature();
 }

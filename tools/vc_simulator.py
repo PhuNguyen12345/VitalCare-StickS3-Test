@@ -154,7 +154,10 @@ class VirtualButton:
 class SimulatorApp:
     DATA_FIELDS = [
         ("rtc", "RTC"),
-        ("temp", "Nhiệt độ (°C)"),
+        ("temp", "Nhiệt độ da (°C)"),
+        ("body", "Nhiệt độ cơ thể (°C)"),
+        ("tstate", "Trạng thái nhiệt độ"),
+        ("tcal", "Đã hiệu chuẩn"),
         ("hr", "Nhịp tim (BPM)"),
         ("spo2", "SpO2 (%)"),
         ("conf", "Confidence (%)"),

@@ -34,11 +34,27 @@ static HealthReading reading(float temperature, uint16_t hr, uint16_t spo2, uint
     return value;
 }
 
+// Nhiệt độ cơ thể đã ổn định và đã hiệu chuẩn: không thêm cờ nhiệt độ nào
+static BodyTemperature stableBody(float bodyC = 36.37f, bool calibrated = true) {
+    BodyTemperature body;
+    body.state = BodyTemperatureState::Stable;
+    body.bodyC = bodyC;
+    body.calibrated = calibrated;
+    return body;
+}
+
 // Chạy LogService từ 0 tới endMs, mỗi 100ms một lần update
 template <typename ReadingFn>
-static void run(LogService& service, uint32_t endMs, ReadingFn readingAt, uint32_t epoch, bool reliable) {
+static void run(
+    LogService& service,
+    uint32_t endMs,
+    ReadingFn readingAt,
+    uint32_t epoch,
+    bool reliable,
+    const BodyTemperature& body = stableBody()
+) {
     for (uint32_t now = 100; now <= endMs; now += 100) {
-        service.update(now, readingAt(now), epoch == 0 ? 0 : epoch + now / 1000, reliable);
+        service.update(now, readingAt(now), body, epoch == 0 ? 0 : epoch + now / 1000, reliable);
     }
 }
 
@@ -162,6 +178,53 @@ void test_heart_rate_without_spo2() {
     TEST_ASSERT_EQUAL_UINT8(LogFlags::SPO2_INVALID, record.flags);
 }
 
+void test_body_temperature_column_and_flags() {
+    FakeRepository repo;
+    LogService service(repo, 1000, 10000);
+    service.begin(0);
+
+    run(service, 10000, [](uint32_t) { return reading(34.17f, 70, 97, 90, 3); }, 1761550000, true, stableBody(36.37f, false));
+
+    const LogRecord& record = repo.records[0];
+    TEST_ASSERT_EQUAL_INT16(3417, record.temperatureX100);
+    TEST_ASSERT_EQUAL_INT16(3637, record.bodyTemperatureX100);
+    TEST_ASSERT_EQUAL_UINT8(LogFlags::TEMP_UNCALIBRATED, record.flags);
+}
+
+void test_unstable_body_temperature() {
+    FakeRepository repo;
+    LogService service(repo, 1000, 10000);
+    service.begin(0);
+
+    BodyTemperature body;
+    body.state = BodyTemperatureState::Stabilizing;
+    body.calibrated = true;
+
+    run(service, 10000, [](uint32_t) { return reading(33.6f, 70, 97, 90, 3); }, 1761550000, true, body);
+
+    const LogRecord& record = repo.records[0];
+    TEST_ASSERT_EQUAL_INT16(3360, record.temperatureX100);  // Da vẫn ghi
+    TEST_ASSERT_EQUAL_INT16(0, record.bodyTemperatureX100);
+    TEST_ASSERT_EQUAL_UINT8(LogFlags::TEMP_UNSTABLE, record.flags);
+}
+
+void test_not_worn_sets_loose() {
+    FakeRepository repo;
+    LogService service(repo, 1000, 10000);
+    service.begin(0);
+
+    BodyTemperature body;
+    body.state = BodyTemperatureState::NotWorn;
+    body.calibrated = true;
+
+    run(service, 10000, [](uint32_t) { return reading(26.0f, 0, 0, 0, 0); }, 1761550000, true, body);
+
+    TEST_ASSERT_EQUAL_UINT8(
+        LogFlags::TEMP_UNSTABLE | LogFlags::LOOSE | LogFlags::BIO_INVALID | LogFlags::SPO2_INVALID,
+        repo.records[0].flags
+    );
+}
+
 int main() {
     UNITY_BEGIN();
     RUN_TEST(test_no_record_before_window_ends);
@@ -172,5 +235,8 @@ int main() {
     RUN_TEST(test_spo2_zero_samples_are_excluded);
     RUN_TEST(test_low_confidence_samples_are_excluded);
     RUN_TEST(test_heart_rate_without_spo2);
+    RUN_TEST(test_body_temperature_column_and_flags);
+    RUN_TEST(test_unstable_body_temperature);
+    RUN_TEST(test_not_worn_sets_loose);
     return UNITY_END();
 }

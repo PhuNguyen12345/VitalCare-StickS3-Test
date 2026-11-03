@@ -9,6 +9,9 @@ Cách dùng:
     python3 tools/ble_client.py live                 # in dữ liệu realtime (Ctrl+C để dừng)
     python3 tools/ble_client.py settime              # chỉnh giờ theo đồng hồ máy tính
     python3 tools/ble_client.py sync                 # đồng bộ log về ble_logs/*.csv
+    python3 tools/ble_client.py calibrate --ref 36.4 # hiệu chuẩn nhiệt độ bằng nhiệt kế đo miệng
+    python3 tools/ble_client.py setoffset --offset 2.2
+    python3 tools/ble_client.py resetoffset          # về độ lệch mặc định
     python3 tools/ble_client.py selftest             # kiểm tra bộ giải mã (không cần thiết bị)
 
 Tuỳ chọn: --name VitalCare-1A2B (chọn đúng thiết bị khi có nhiều máy)
@@ -31,7 +34,7 @@ STATUS_UUID = "06b40005-765e-4d79-a126-f95ef3affd61"
 
 NAME_PREFIX = "VitalCare-"
 
-LIVE_FORMAT = struct.Struct("<IhHBBBBHH")    # 16 byte
+LIVE_FORMAT = struct.Struct("<IhHBBBBHh")    # 16 byte, byte 14-15: nhiệt độ cơ thể (i16)
 STATUS_FORMAT = struct.Struct("<BBBIhHII")   # 19 byte
 SYNC_HEADER = struct.Struct("<HHB")          # 5 byte
 SEGMENT_END = struct.Struct("<II")           # totalBytes, crc32
@@ -45,10 +48,12 @@ SYNC_DONE = 2
 OP_SET_TIME = 0x01
 OP_SYNC_START = 0x02
 OP_SYNC_ACK = 0x03
+OP_SET_TEMP_OFFSET = 0x06
+OP_CALIBRATE_TEMP = 0x07
 
 LOG_FLAGS = {0x01: "TIME_INVALID", 0x02: "TEMP_INVALID", 0x04: "BIO_INVALID", 0x08: "LOOSE", 0x10: "ALERT",
-             0x20: "SPO2_INVALID"}
-STATUS_FLAGS = {0x01: "RTC_VALID", 0x02: "SEN_READY", 0x04: "SYNCING", 0x08: "LOG_OVERFLOW"}
+             0x20: "SPO2_INVALID", 0x40: "TEMP_UNSTABLE", 0x80: "TEMP_UNCALIBRATED"}
+STATUS_FLAGS = {0x01: "RTC_VALID", 0x02: "SEN_READY", 0x04: "SYNCING", 0x08: "LOG_OVERFLOW", 0x10: "TEMP_CALIBRATED"}
 
 
 # ======================================================
@@ -60,10 +65,11 @@ def flag_names(value, names):
 
 
 def decode_live(data):
-    epoch, temp, hr, spo2, conf, finger, flags, seq, _ = LIVE_FORMAT.unpack(bytes(data[:LIVE_FORMAT.size]))
+    epoch, temp, hr, spo2, conf, finger, flags, seq, body = LIVE_FORMAT.unpack(bytes(data[:LIVE_FORMAT.size]))
     return {
         "epoch": epoch,
         "temperature": None if temp == TEMP_INVALID else temp / 100,
+        "body_temperature": None if body == TEMP_INVALID else body / 100,
         "hr": hr,
         "spo2": spo2,
         "confidence": conf,
@@ -95,6 +101,16 @@ def encode_ack(segment_id):
     return struct.pack("<BH", OP_SYNC_ACK, segment_id)
 
 
+def encode_calibrate(reference_c):
+    return struct.pack("<Bh", OP_CALIBRATE_TEMP, round(reference_c * 100))
+
+
+def encode_set_offset(offset_c):
+    """offset_c = None: về độ lệch mặc định."""
+    value = TEMP_INVALID if offset_c is None else round(offset_c * 100)
+    return struct.pack("<Bh", OP_SET_TEMP_OFFSET, value)
+
+
 def format_epoch(epoch, tz_minutes=None):
     if epoch == 0:
         return "--"
@@ -117,18 +133,22 @@ def print_status(status):
 
 def self_test():
     """Giải mã đúng các vector byte trong test/test_ble_protocol (firmware)."""
-    live = decode_live(bytes.fromhex("78563412440e4e00625f030402010000"))
-    assert live == {"epoch": 0x12345678, "temperature": 36.52, "hr": 78, "spo2": 98,
+    live = decode_live(bytes.fromhex("78563412440e4e00625f03040201380e"))
+    assert live == {"epoch": 0x12345678, "temperature": 36.52, "body_temperature": 36.40, "hr": 78, "spo2": 98,
                     "confidence": 95, "finger": 3, "flags": 0x04, "seq": 0x0102}, live
 
-    assert decode_live(bytes(4) + bytes.fromhex("0080") + bytes(10))["temperature"] is None
+    invalid = decode_live(bytes(4) + bytes.fromhex("0080") + bytes(8) + bytes.fromhex("0080"))
+    assert invalid["temperature"] is None and invalid["body_temperature"] is None
 
-    status = decode_status(bytes.fromhex("010557000000 65a401 0300 409c0000 40420f00".replace(" ", "")))
-    assert status == {"version": 1, "flags": 0x05, "battery": 87, "epoch": 0x65000000, "tz_minutes": 420,
+    status = decode_status(bytes.fromhex("020557000000 65a401 0300 409c0000 40420f00".replace(" ", "")))
+    assert status == {"version": 2, "flags": 0x05, "battery": 87, "epoch": 0x65000000, "tz_minutes": 420,
                       "pending_segments": 3, "pending_bytes": 40000, "fs_free_bytes": 1000000}, status
 
     assert encode_set_time(0x12345678, -300) == bytes.fromhex("0178563412d4fe")
     assert encode_ack(0x012A) == bytes.fromhex("032a01")
+    assert encode_set_offset(2.2) == bytes.fromhex("06dc00")
+    assert encode_set_offset(None) == bytes.fromhex("060080")
+    assert encode_calibrate(36.4) == bytes.fromhex("07380e")
 
     end = bytes.fromhex("07000300011027000026 39f4cb".replace(" ", ""))
     assert SYNC_HEADER.unpack(end[:5]) == (7, 3, SYNC_SEGMENT_END)
@@ -214,8 +234,9 @@ async def cmd_live(args):
     def on_live(_sender, data):
         live = decode_live(data)
         temp = "--.--" if live["temperature"] is None else f"{live['temperature']:.2f}"
+        body = "--.--" if live["body_temperature"] is None else f"{live['body_temperature']:.2f}"
         print(
-            f"{format_epoch(live['epoch'])}  temp={temp}  hr={live['hr']:3}  spo2={live['spo2']:3}  "
+            f"{format_epoch(live['epoch'])}  skin={temp}  body={body}  hr={live['hr']:3}  spo2={live['spo2']:3}  "
             f"conf={live['confidence']:3}  finger={live['finger']}  "
             f"flags={','.join(flag_names(live['flags'], LOG_FLAGS))}  seq={live['seq']}"
         )
@@ -229,6 +250,42 @@ async def cmd_live(args):
             await asyncio.Event().wait()
     finally:
         await client.disconnect()
+
+
+async def send_temperature_command(args, payload, description):
+    client = await connect(args)
+    try:
+        await client.write_gatt_char(CONTROL_UUID, payload, response=True)
+        print(f"Đã gửi {description}")
+
+        # Kết quả xem ở log Serial của thiết bị; ở đây đọc lại cờ và gói live
+        await asyncio.sleep(1.5)
+        status = decode_status(await client.read_gatt_char(STATUS_UUID))
+        live = decode_live(await client.read_gatt_char(LIVE_UUID))
+
+        calibrated = bool(status["flags"] & 0x10)
+        body = "--.-- (chưa ổn định)" if live["body_temperature"] is None else f"{live['body_temperature']:.2f} °C"
+        print(f"  Đã hiệu chuẩn      : {'có' if calibrated else 'không (dùng độ lệch mặc định)'}")
+        print(f"  Nhiệt độ da        : {live['temperature']} °C")
+        print(f"  Nhiệt độ cơ thể    : {body}")
+    finally:
+        await client.disconnect()
+
+
+async def cmd_calibrate(args):
+    if args.ref is None:
+        sys.exit("Cần --ref <nhiệt độ miệng>, vd --ref 36.4")
+    await send_temperature_command(args, encode_calibrate(args.ref), f"CALIBRATE_TEMP {args.ref:.2f} °C")
+
+
+async def cmd_setoffset(args):
+    if args.offset is None:
+        sys.exit("Cần --offset <độ lệch>, vd --offset 2.2")
+    await send_temperature_command(args, encode_set_offset(args.offset), f"SET_TEMP_OFFSET {args.offset:.2f} °C")
+
+
+async def cmd_resetoffset(args):
+    await send_temperature_command(args, encode_set_offset(None), "SET_TEMP_OFFSET (về mặc định)")
 
 
 async def cmd_sync(args):
@@ -290,12 +347,17 @@ async def cmd_sync(args):
 
 def main():
     parser = argparse.ArgumentParser(description="Client BLE kiểm thử firmware VitalCare")
-    parser.add_argument("command", choices=["scan", "status", "live", "settime", "sync", "selftest"])
+    parser.add_argument(
+        "command",
+        choices=["scan", "status", "live", "settime", "sync", "calibrate", "setoffset", "resetoffset", "selftest"],
+    )
     parser.add_argument("--name", help="Tên thiết bị, vd VitalCare-1A2B")
     parser.add_argument("--timeout", type=float, default=8.0, help="Thời gian tìm thiết bị (giây)")
     parser.add_argument("--seconds", type=float, default=0, help="live: số giây nhận dữ liệu (0 = tới khi Ctrl+C)")
     parser.add_argument("--out", default="ble_logs", help="sync: thư mục lưu CSV")
     parser.add_argument("--idle-timeout", type=float, default=15.0, help="sync: dừng nếu không có gói trong N giây")
+    parser.add_argument("--ref", type=float, help="calibrate: nhiệt độ miệng đo bằng nhiệt kế (°C)")
+    parser.add_argument("--offset", type=float, help="setoffset: độ lệch miệng - cổ tay (°C)")
     args = parser.parse_args()
 
     if args.command == "selftest":
@@ -308,6 +370,9 @@ def main():
         "live": cmd_live,
         "settime": cmd_settime,
         "sync": cmd_sync,
+        "calibrate": cmd_calibrate,
+        "setoffset": cmd_setoffset,
+        "resetoffset": cmd_resetoffset,
     }
 
     try:

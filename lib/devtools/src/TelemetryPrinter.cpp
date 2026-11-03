@@ -43,6 +43,15 @@ void TelemetryPrinter::printReadable(const AppViewModel& model) {
         out_.print("ERROR");
     }
 
+    out_.print(" | Body: ");
+
+    if (model.bodyTemperature.stable()) {
+        out_.print(model.bodyTemperature.bodyC, 2);
+        out_.print(" C");
+    } else {
+        out_.print(bodyTemperatureStateName(model.bodyTemperature.state));
+    }
+
     out_.print(" | HR: ");
     out_.print(model.reading.heartRate);
 
@@ -79,6 +88,20 @@ void TelemetryPrinter::printData(const AppViewModel& model, bool mirrorEnabled) 
     } else {
         out_.print("err");
     }
+
+    out_.print(" body=");
+
+    if (model.bodyTemperature.stable()) {
+        out_.print(model.bodyTemperature.bodyC, 2);
+    } else {
+        out_.print("err");
+    }
+
+    out_.printf(
+        " tstate=%s tcal=%d",
+        bodyTemperatureStateName(model.bodyTemperature.state),
+        model.bodyTemperature.calibrated ? 1 : 0
+    );
 
     if (model.status.senInitialized && reading.bioValid) {
         out_.printf(

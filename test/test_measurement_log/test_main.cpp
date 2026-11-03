@@ -9,7 +9,8 @@ void tearDown() {}
 void test_format_line() {
     LogRecord record;
     record.epoch = 1761550000;
-    record.temperatureX100 = 3652;
+    record.temperatureX100 = 3417;
+    record.bodyTemperatureX100 = 3637;
     record.heartRate = 78;
     record.spo2 = 98;
     record.confidence = 95;
@@ -18,7 +19,7 @@ void test_format_line() {
     char line[48];
     size_t length = formatCsvLine(record, line, sizeof(line));
 
-    TEST_ASSERT_EQUAL_STRING("1761550000,3652,78,98,95,0\n", line);
+    TEST_ASSERT_EQUAL_STRING("1761550000,3417,3637,78,98,95,0\n", line);
     TEST_ASSERT_EQUAL(strlen(line), length);
 }
 
@@ -32,7 +33,8 @@ void test_round_trip_negative_temperature_and_flags() {
     LogRecord record;
     record.epoch = 123;
     record.temperatureX100 = -1250;
-    record.flags = LogFlags::BIO_INVALID | LogFlags::TIME_INVALID;
+    record.bodyTemperatureX100 = 3650;
+    record.flags = LogFlags::BIO_INVALID | LogFlags::TIME_INVALID | LogFlags::TEMP_UNCALIBRATED;
 
     char line[48];
     formatCsvLine(record, line, sizeof(line));
@@ -41,23 +43,25 @@ void test_round_trip_negative_temperature_and_flags() {
     TEST_ASSERT_TRUE(parseCsvLine(line, parsed));
     TEST_ASSERT_EQUAL_UINT32(123, parsed.epoch);
     TEST_ASSERT_EQUAL_INT16(-1250, parsed.temperatureX100);
-    TEST_ASSERT_EQUAL_UINT8(LogFlags::BIO_INVALID | LogFlags::TIME_INVALID, parsed.flags);
+    TEST_ASSERT_EQUAL_INT16(3650, parsed.bodyTemperatureX100);
+    TEST_ASSERT_EQUAL_UINT8(LogFlags::BIO_INVALID | LogFlags::TIME_INVALID | LogFlags::TEMP_UNCALIBRATED, parsed.flags);
 }
 
 void test_parse_rejects_header_and_garbage() {
     LogRecord parsed;
     TEST_ASSERT_FALSE(parseCsvLine(LOG_CSV_HEADER, parsed));
-    TEST_ASSERT_FALSE(parseCsvLine("ts,t100,hr,spo2,conf,flags\n", parsed));
+    TEST_ASSERT_FALSE(parseCsvLine("ts,t100,tb100,hr,spo2,conf,flags\n", parsed));
+    TEST_ASSERT_FALSE(parseCsvLine("1,2,3,4,5,6\n", parsed));  // Dòng định dạng v2 (6 cột)
     TEST_ASSERT_FALSE(parseCsvLine("1,2,3", parsed));
     TEST_ASSERT_FALSE(parseCsvLine("1,2,3,4,5,x", parsed));
     TEST_ASSERT_FALSE(parseCsvLine("", parsed));
-    TEST_ASSERT_TRUE(parseCsvLine("1,2,3,4,5,6\r\n", parsed));
+    TEST_ASSERT_TRUE(parseCsvLine("1,2,3,4,5,6,7\r\n", parsed));
 }
 
 // Dòng tên cột phải có đúng 6 cột như dòng dữ liệu
 void test_header_columns_match_record_columns() {
     const char* columns = strchr(LOG_CSV_HEADER, '\n') + 1;
-    TEST_ASSERT_EQUAL_STRING("ts,t100,hr,spo2,conf,flags\n", columns);
+    TEST_ASSERT_EQUAL_STRING("ts,t100,tb100,hr,spo2,conf,flags\n", columns);
 
     LogRecord record;
     char line[48];
@@ -69,7 +73,7 @@ void test_header_columns_match_record_columns() {
     for (const char* c = line; *c; c++) lineCommas += *c == ',';
 
     TEST_ASSERT_EQUAL(lineCommas, headerCommas);
-    TEST_ASSERT_EQUAL_STRING_LEN("#v2\n", LOG_CSV_HEADER, 4);
+    TEST_ASSERT_EQUAL_STRING_LEN("#v3\n", LOG_CSV_HEADER, 4);
 }
 
 int main() {

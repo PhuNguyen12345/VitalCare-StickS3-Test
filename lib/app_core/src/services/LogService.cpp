@@ -11,7 +11,13 @@ void LogService::begin(uint32_t nowMs) {
     resetWindow();
 }
 
-void LogService::update(uint32_t nowMs, const HealthReading& reading, uint32_t epochUtc, bool timeReliable) {
+void LogService::update(
+    uint32_t nowMs,
+    const HealthReading& reading,
+    const BodyTemperature& body,
+    uint32_t epochUtc,
+    bool timeReliable
+) {
     if (nowMs - lastSampleMs_ >= sampleIntervalMs_) {
         lastSampleMs_ = nowMs;
         addSample(reading);
@@ -19,7 +25,7 @@ void LogService::update(uint32_t nowMs, const HealthReading& reading, uint32_t e
 
     if (nowMs - windowStartMs_ >= windowMs_) {
         windowStartMs_ = nowMs;
-        writeRecord(nowMs, epochUtc, timeReliable);
+        writeRecord(nowMs, body, epochUtc, timeReliable);
         resetWindow();
     }
 }
@@ -44,7 +50,7 @@ void LogService::addSample(const HealthReading& reading) {
     }
 }
 
-void LogService::writeRecord(uint32_t nowMs, uint32_t epochUtc, bool timeReliable) {
+void LogService::writeRecord(uint32_t nowMs, const BodyTemperature& body, uint32_t epochUtc, bool timeReliable) {
     LogRecord record;
 
     // Chưa có giờ thì dùng thời gian chạy (giây) và đánh dấu TIME_INVALID
@@ -54,11 +60,16 @@ void LogService::writeRecord(uint32_t nowMs, uint32_t epochUtc, bool timeReliabl
         record.flags |= LogFlags::TIME_INVALID;
     }
 
+    // Nhiệt độ da: trung bình cửa sổ; nhiệt độ cơ thể: ước tính lúc ghi
     if (temperatureCount_ > 0) {
         record.temperatureX100 = (int16_t)lroundf(temperatureSum_ / temperatureCount_ * 100.0f);
-    } else {
-        record.flags |= LogFlags::TEMP_INVALID;
     }
+
+    if (body.stable()) {
+        record.bodyTemperatureX100 = (int16_t)lroundf(body.bodyC * 100.0f);
+    }
+
+    record.flags |= temperatureFlags(temperatureCount_ > 0, body);
 
     if (heartRateCount_ > 0) {
         record.heartRate = (uint16_t)((heartRateSum_ + heartRateCount_ / 2) / heartRateCount_);

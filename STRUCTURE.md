@@ -24,6 +24,7 @@ m5sticks3-health-device/
 │   │       │
 │   │       ├── domain/
 │   │       │   ├── HealthReading.h
+│   │       │   ├── BodyTemperature.h       (*) trạng thái, ngưỡng, cờ nhiệt độ cơ thể
 │   │       │   ├── MeasurementLog.h
 │   │       │   ├── DeviceStatus.h
 │   │       │   └── TimeInfo.h
@@ -45,6 +46,8 @@ m5sticks3-health-device/
 │   │       └── services/
 │   │           ├── MeasurementService.h
 │   │           ├── MeasurementService.cpp
+│   │           ├── BodyTemperatureEstimator.h   (*)
+│   │           ├── BodyTemperatureEstimator.cpp (*)
 │   │           ├── TimeService.h
 │   │           ├── TimeService.cpp
 │   │           ├── LogService.h
@@ -128,6 +131,7 @@ m5sticks3-health-device/
     ├── test_time_epoch/                (*)
     ├── test_measurement_log/           (*)
     ├── test_sample_quality/            (*)
+    ├── test_body_temperature/          (*)
     ├── test_ble_protocol/              (*)
     ├── test_log_service/               (*)
     ├── test_sync_service/              (*)

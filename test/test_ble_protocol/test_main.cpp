@@ -20,10 +20,11 @@ void test_encode_live() {
     sample.fingerStatus = 3;
     sample.flags = 0x04;
     sample.seq = 0x0102;
+    sample.bodyTemperatureX100 = 3640;
 
     const uint8_t expected[LIVE_SIZE] = {
         0x78, 0x56, 0x34, 0x12, 0x44, 0x0E, 0x4E, 0x00,
-        0x62, 0x5F, 0x03, 0x04, 0x02, 0x01, 0x00, 0x00
+        0x62, 0x5F, 0x03, 0x04, 0x02, 0x01, 0x38, 0x0E
     };
 
     uint8_t out[LIVE_SIZE];
@@ -38,6 +39,10 @@ void test_encode_live_invalid_temperature() {
 
     TEST_ASSERT_EQUAL_HEX8(0x00, out[4]);
     TEST_ASSERT_EQUAL_HEX8(0x80, out[5]);
+
+    // Nhiệt độ cơ thể mặc định cũng là "không hợp lệ"
+    TEST_ASSERT_EQUAL_HEX8(0x00, out[14]);
+    TEST_ASSERT_EQUAL_HEX8(0x80, out[15]);
 }
 
 void test_encode_status() {
@@ -51,7 +56,7 @@ void test_encode_status() {
     status.fsFreeBytes = 1000000;
 
     const uint8_t expected[STATUS_SIZE] = {
-        0x01, 0x05, 0x57, 0x00, 0x00, 0x00, 0x65, 0xA4, 0x01, 0x03,
+        0x02, 0x05, 0x57, 0x00, 0x00, 0x00, 0x65, 0xA4, 0x01, 0x03,
         0x00, 0x40, 0x9C, 0x00, 0x00, 0x40, 0x42, 0x0F, 0x00
     };
 
@@ -86,6 +91,16 @@ void test_decode_control() {
     TEST_ASSERT_EQUAL(ControlOp::SyncAck, command.op);
     TEST_ASSERT_EQUAL_UINT16(0x012A, command.segmentId);
 
+    const uint8_t offset[] = {0x06, 0xDC, 0x00};  // 2.20 °C
+    TEST_ASSERT_TRUE(decodeControl(offset, sizeof(offset), command));
+    TEST_ASSERT_EQUAL(ControlOp::SetTempOffset, command.op);
+    TEST_ASSERT_EQUAL_INT16(220, command.valueX100);
+
+    const uint8_t calibrate[] = {0x07, 0x38, 0x0E};  // 36.40 °C
+    TEST_ASSERT_TRUE(decodeControl(calibrate, sizeof(calibrate), command));
+    TEST_ASSERT_EQUAL(ControlOp::CalibrateTemp, command.op);
+    TEST_ASSERT_EQUAL_INT16(3640, command.valueX100);
+
     const uint8_t start[] = {0x02};
     TEST_ASSERT_TRUE(decodeControl(start, sizeof(start), command));
     TEST_ASSERT_EQUAL(ControlOp::SyncStart, command.op);
@@ -96,10 +111,12 @@ void test_decode_control_rejects_bad_input() {
 
     const uint8_t shortSetTime[] = {0x01, 0x00, 0x00};
     const uint8_t shortAck[] = {0x03, 0x01};
+    const uint8_t shortCalibrate[] = {0x07, 0x38};
     const uint8_t unknown[] = {0x7F};
 
     TEST_ASSERT_FALSE(decodeControl(shortSetTime, sizeof(shortSetTime), command));
     TEST_ASSERT_FALSE(decodeControl(shortAck, sizeof(shortAck), command));
+    TEST_ASSERT_FALSE(decodeControl(shortCalibrate, sizeof(shortCalibrate), command));
     TEST_ASSERT_FALSE(decodeControl(unknown, sizeof(unknown), command));
     TEST_ASSERT_FALSE(decodeControl(nullptr, 0, command));
 }

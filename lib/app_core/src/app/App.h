@@ -5,6 +5,7 @@
 #include "app/AppEvent.h"
 #include "app/AppState.h"
 #include "app/AppViewModel.h"
+#include "services/BodyTemperatureEstimator.h"
 #include "services/LogService.h"
 #include "services/MeasurementService.h"
 #include "services/SyncService.h"
@@ -19,7 +20,8 @@ public:
         TimeService* timeService = nullptr,
         MeasurementService* measurementService = nullptr,
         LogService* logService = nullptr,
-        SyncService* syncService = nullptr
+        SyncService* syncService = nullptr,
+        BodyTemperatureEstimator* temperatureEstimator = nullptr
     );
 
     void setLogger(LogFn logger) { logger_ = logger; }
@@ -42,11 +44,13 @@ private:
     void goToClockPage();
     void log(const char* message) const;
     DeviceStatus deviceStatus() const;
+    BodyTemperature bodyTemperature() const;
 
     TimeService* timeService_;
     MeasurementService* measurementService_;
     LogService* logService_;
     SyncService* syncService_;
+    BodyTemperatureEstimator* temperatureEstimator_;
     LogFn logger_ = nullptr;
     uint8_t batteryLevel_ = 0;
     AppState state_;

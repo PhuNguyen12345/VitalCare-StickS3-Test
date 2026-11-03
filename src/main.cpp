@@ -7,6 +7,7 @@
 #include "BuildConfig.h"
 
 #include "app/App.h"
+#include "services/BodyTemperatureEstimator.h"
 #include "services/LogService.h"
 #include "services/MeasurementService.h"
 #include "services/SyncService.h"
@@ -95,6 +96,9 @@ TimeService timeService(
     AppConfig::DEFAULT_TZ_MINUTES
 );
 
+// Độ lệch nhiệt độ đã hiệu chuẩn lưu trong NVS
+BodyTemperatureEstimator bodyTemperature(&configRepository);
+
 LogService logService(
     logRepository,
     AppConfig::LOG_SAMPLE_INTERVAL,
@@ -110,7 +114,13 @@ SyncService syncService(
     AppConfig::BLE_SYNC_ACK_TIMEOUT
 );
 
-App app(&timeService, &measurementService, &logService, &syncService);
+App app(
+    &timeService,
+    &measurementService,
+    &logService,
+    &syncService,
+    &bodyTemperature
+);
 
 UiController ui(M5.Display);
 
@@ -156,6 +166,7 @@ void setup() {
 
     app.setLogger(logLine);
     syncService.setLogger(logLine);
+    syncService.setTemperatureEstimator(&bodyTemperature);
 
     configRepository.begin();
     logRepository.begin();

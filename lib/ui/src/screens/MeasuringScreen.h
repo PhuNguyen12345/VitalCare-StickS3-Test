@@ -34,7 +34,7 @@ public:
         canvas.fillSprite(Theme::BACKGROUND);
 
         if (metric_ == Metric::Temperature) {
-            drawTemperature(canvas, model.reading);
+            drawTemperature(canvas, model);
         } else {
             drawBio(canvas, model);
         }
@@ -43,23 +43,48 @@ public:
     }
 
 private:
-    void drawTemperature(M5Canvas& canvas, const HealthReading& reading) {
-        drawTitle(canvas, "SKIN TEMPERATURE", TFT_YELLOW);
+    // Nhiệt độ cơ thể ước tính (xem BodyTemperatureEstimator), kèm nhiệt độ da thô
+    void drawTemperature(M5Canvas& canvas, const AppViewModel& model) {
+        const BodyTemperature& body = model.bodyTemperature;
 
-        if (reading.temperatureValid) {
-            char temperatureText[20];
+        drawTitle(canvas, "BODY TEMPERATURE", TFT_YELLOW);
 
-            snprintf(
-                temperatureText,
-                sizeof(temperatureText),
-                "%.2f C",
-                reading.temperatureC
-            );
-
-            drawCentered(canvas, temperatureText, TFT_GREEN, Theme::FONT_VALUE);
-        } else {
+        if (!model.reading.temperatureValid) {
             drawCentered(canvas, "MAX ERROR", TFT_RED, Theme::FONT_MESSAGE);
+            return;
         }
+
+        char detailText[32];
+
+        if (body.state == BodyTemperatureState::NotWorn) {
+            drawCentered(canvas, "NOT WORN", TFT_YELLOW, Theme::FONT_MESSAGE, -8);
+
+            snprintf(detailText, sizeof(detailText), "Skin %.1f C", model.reading.temperatureC);
+            drawCentered(canvas, detailText, TFT_WHITE, Theme::FONT_SMALL, 22);
+            return;
+        }
+
+        // Đang đeo nhưng chưa cân bằng nhiệt: chưa hiện số
+        if (!body.stable()) {
+            drawCentered(canvas, "--.- C", TFT_DARKGREY, Theme::FONT_VALUE, -7);
+
+            snprintf(detailText, sizeof(detailText), "Stabilizing (%.1f C)", model.reading.temperatureC);
+            drawCentered(canvas, detailText, TFT_YELLOW, Theme::FONT_SMALL, 27);
+            return;
+        }
+
+        // "~": nhiệt độ ước tính, làm tròn 0.1 °C
+        char valueText[20];
+        snprintf(valueText, sizeof(valueText), "~%.1f C", body.bodyC);
+        drawCentered(canvas, valueText, TFT_GREEN, Theme::FONT_VALUE, -7);
+
+        snprintf(
+            detailText,
+            sizeof(detailText),
+            body.calibrated ? "Skin %.2f C" : "Skin %.2f C, uncal.",
+            model.reading.temperatureC
+        );
+        drawCentered(canvas, detailText, body.calibrated ? TFT_WHITE : TFT_DARKGREY, Theme::FONT_SMALL, 27);
     }
 
     // Nhịp tim và SpO2 chỉ khác tiêu đề, gợi ý và định dạng giá trị

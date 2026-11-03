@@ -1,0 +1,7 @@
+date,time,person,ambient_c,oral_c,wrist_c,wrist_source,wear_minutes,offset_c,thermometer,notes
+03/11/2026,21:57,phu,,35.8,33.1,max30205,9,2.7,nhiet ke dien tu (do mieng),lan 1
+03/11/2026,21:58,phu,,36.1,33.6,max30205,10,2.5,nhiet ke dien tu (do mieng),lan 2
+03/11/2026,21:59,phu,,36.2,34,max30205,11,2.2,nhiet ke dien tu (do mieng),lan 3
+03/11/2026,22:05,phu,,36.4,34.17,max30205,17,2.23,nhiet ke dien tu (do mieng),da can bang
+03/11/2026,22:08,phu,,36.3,34.15,max30205,20,2.15,nhiet ke dien tu (do mieng),da can bang
+03/11/2026,22:10,phu,,37,34.2,max30205,22,2.8,nhiet ke dien tu (do mieng),dat gan hong - khong dung de tinh
