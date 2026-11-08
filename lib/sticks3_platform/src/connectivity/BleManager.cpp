@@ -12,8 +12,12 @@ public:
         owner_.mtu_ = DEFAULT_MTU;
     }
 
-    void onDisconnect(NimBLEServer*, NimBLEConnInfo&, int) override {
+    void onDisconnect(NimBLEServer*, NimBLEConnInfo&, int reason) override {
         owner_.mtu_ = DEFAULT_MTU;
+
+        // Mã lý do: 0x208 = mất sóng (timeout), 0x213 = phía điện thoại chủ động ngắt,
+        // 0x216 = thiết bị tự ngắt
+        Serial.printf("BLE: disconnect reason 0x%03X\n", reason);
     }
 
     void onMTUChange(uint16_t mtu, NimBLEConnInfo&) override {

@@ -118,7 +118,17 @@ void SyncService::handleCommand(const ControlCommand& command, uint32_t nowMs) {
 
         case ControlOp::SyncAck:
             if (state_ == State::WaitingAck && command.segmentId == segmentId_) {
-                repository_.deleteSegment(segmentId_);
+                bool deleted = repository_.deleteSegment(segmentId_);
+
+                snprintf(
+                    message,
+                    sizeof(message),
+                    "Sync: ACK segment %u, deleted %s",
+                    segmentId_,
+                    deleted ? "OK" : "FAILED"
+                );
+                log(message);
+
                 startNextSegment();
             }
             break;
@@ -180,6 +190,10 @@ void SyncService::startNextSegment() {
         state_ = State::SendingDone;
         return;
     }
+
+    char message[48];
+    snprintf(message, sizeof(message), "Sync: sending segment %u (%lu bytes)", id, (unsigned long)size);
+    log(message);
 
     segmentId_ = id;
     segmentSize_ = size;

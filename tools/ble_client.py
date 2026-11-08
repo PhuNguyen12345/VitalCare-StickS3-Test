@@ -198,11 +198,12 @@ async def cmd_scan(args):
         print(f"{device.name or adv.local_name or '?':20}  {device.address}  RSSI {adv.rssi} dBm")
 
 
-async def connect(args):
+async def connect(args, on_disconnect=None):
     from bleak import BleakClient
 
     device = await find_device(args.name, args.timeout)
-    client = BleakClient(device)
+    # on_disconnect: gọi khi mất kết nối giữa chừng (thiết bị tắt, ra khỏi vùng phủ sóng...)
+    client = BleakClient(device, disconnected_callback=(lambda _client: on_disconnect()) if on_disconnect else None)
     await client.connect()
     print(f"Đã kết nối {device.name} ({device.address}), MTU {client.mtu_size}")
     return client
@@ -293,8 +294,10 @@ async def cmd_resetoffset(args):
 
 
 async def cmd_sync(args):
-    client = await connect(args)
     packets = asyncio.Queue()
+    # None trong hàng đợi = đã mất kết nối
+    client = await connect(args, on_disconnect=lambda: packets.put_nowait(None))
+    lost = False
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -314,6 +317,12 @@ async def cmd_sync(args):
                 packet = await asyncio.wait_for(packets.get(), timeout=args.idle_timeout)
             except asyncio.TimeoutError:
                 print(f"Không nhận được gói nào trong {args.idle_timeout}s, dừng.")
+                break
+
+            if packet is None:
+                lost = True
+                print(f"Mất kết nối BLE giữa chừng, đã lưu {saved} segment.")
+                print("Segment chưa ACK vẫn còn trên thiết bị, chạy lại sync để gửi tiếp.")
                 break
 
             segment_id, chunk_index, kind = SYNC_HEADER.unpack(packet[:SYNC_HEADER.size])
@@ -344,9 +353,11 @@ async def cmd_sync(args):
                 print(f"Đồng bộ xong: {saved} segment")
                 break
 
-        print_status(decode_status(await client.read_gatt_char(STATUS_UUID)))
+        if not lost:
+            print_status(decode_status(await client.read_gatt_char(STATUS_UUID)))
     finally:
-        await client.disconnect()
+        if client.is_connected:
+            await client.disconnect()
 
 
 def main():

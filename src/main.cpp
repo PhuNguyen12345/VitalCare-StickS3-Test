@@ -164,6 +164,8 @@ void setup() {
 
     ui.showBoot();
 
+    Serial.printf("Boot: reset reason = %s\n", StickS3Board::resetReason());
+
     app.setLogger(logLine);
     syncService.setLogger(logLine);
     syncService.setTemperatureEstimator(&bodyTemperature);

@@ -1,5 +1,7 @@
 #include "board/StickS3Board.h"
 
+#include <esp32s3/rom/rtc.h>
+
 void StickS3Board::begin(
     uint32_t serialBaud,
     uint8_t rotation,
@@ -53,6 +55,51 @@ uint8_t StickS3Board::batteryLevel() {
     }
 
     return (uint8_t)min(level, (int32_t)100);
+}
+
+const char* StickS3Board::resetReason() {
+    switch (esp_reset_reason()) {
+        case ESP_RST_POWERON:
+            return "power-on";
+
+        case ESP_RST_EXT:
+            return "external pin";
+
+        case ESP_RST_SW:
+            return "software restart";
+
+        case ESP_RST_PANIC:
+            return "panic";
+
+        case ESP_RST_INT_WDT:
+            return "interrupt watchdog";
+
+        case ESP_RST_TASK_WDT:
+            return "task watchdog";
+
+        case ESP_RST_WDT:
+            return "other watchdog";
+
+        case ESP_RST_DEEPSLEEP:
+            return "deep sleep wake";
+
+        case ESP_RST_BROWNOUT:
+            return "brownout";
+
+        case ESP_RST_SDIO:
+            return "sdio";
+
+        default:
+            break;
+    }
+
+    // esp_reset_reason() không phân loại được reset do cổng USB Serial
+    // (máy tính mở cổng: simulator, Serial Monitor, esptool)
+    if (rtc_get_reset_reason(0) == USB_UART_CHIP_RESET) {
+        return "usb serial port opened";
+    }
+
+    return "unknown";
 }
 
 bool StickS3Board::isCharging() {

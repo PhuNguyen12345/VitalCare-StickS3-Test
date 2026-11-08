@@ -225,6 +225,11 @@ bool LittleFsLogRepository::deleteSegment(uint16_t id) {
         activeSize_ = 0;
     }
 
+    // Lần tìm kế tiếp bắt đầu sau segment vừa xóa, tránh mở file không tồn tại (log lỗi vfs)
+    if (id == oldestId_) {
+        oldestId_ = id + 1;
+    }
+
     // Đã đồng bộ hết thì xóa cờ tràn bộ nhớ
     if (stats_.segmentCount == 0) {
         stats_.overflow = false;

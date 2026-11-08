@@ -91,6 +91,7 @@ Chi tiết trong [STRUCTURE.md](STRUCTURE.md).
 
 ## Lưu ý dễ vấp
 
+- **Mở cổng Serial là reset chip** (`rst:0x15 USB_UART_CHIP_RESET`): mỗi lần simulator, Serial Monitor hay esptool kết nối, thiết bị khởi động lại, mở segment mới và bộ ước tính nhiệt độ chạy lại từ đầu (3 phút). Dòng `Boot: reset reason = ...` cho biết lý do. Panic in ra UART0 nên không thấy qua USB; core dump lưu ở partition `coredump` (`0x7F0000`), đọc bằng `esptool read_flash`.
 - **Giữ `CORE_DEBUG_LEVEL=3`.** Mức 5 làm log hệ thống chen vào và hỏng frame mirror.
 - **Lần `settime` đầu tiên** sau khi chuyển sang lưu UTC tạo bước nhảy −7 giờ trong dữ liệu cũ, vì RTC trước đó giữ giờ Việt Nam.
 - **Nhiệt độ MAX30205 là nhiệt độ da** (khoảng 32–34 °C ở cổ tay). Không phải thân nhiệt.

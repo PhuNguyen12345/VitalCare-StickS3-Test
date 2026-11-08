@@ -23,6 +23,9 @@ public:
 
     bool isCharging();
 
+    // Lý do của lần khởi động gần nhất (esp_reset_reason), để chẩn đoán reset bất thường
+    static const char* resetReason();
+
 private:
     void push(AppEvent event);
 
