@@ -172,7 +172,7 @@ void setup() {
     logRepository.begin();
     syncService.begin();
 
-    app.setBatteryLevel(board.batteryLevel());
+    app.setBattery(board.batteryLevel(), board.isCharging());
 
     // Khởi tạo SEN-15219 trước, rồi MAX30205
     measurementService.addSource(senSensor, AppConfig::BIO_INTERVAL);
@@ -216,7 +216,7 @@ void loop() {
 
     if (now - lastBatteryRead >= AppConfig::BATTERY_INTERVAL) {
         lastBatteryRead = now;
-        app.setBatteryLevel(board.batteryLevel());
+        app.setBattery(board.batteryLevel(), board.isCharging());
     }
 
     app.update(now);

@@ -65,7 +65,7 @@ Gói `live` luôn mang **giá trị thô**, kèm cờ cho biết giá trị nào
 |---|---|---|---|
 | 0 | u8 | `protocolVersion` | Hiện là `2` |
 | 1 | u8 | `flags` | `0x01` RTC_VALID, `0x02` SEN_READY, `0x04` SYNCING, `0x08` LOG_OVERFLOW, `0x10` TEMP_CALIBRATED |
-| 2 | u8 | `battery` | Pin (%) |
+| 2 | u8 | `battery` | Pin (%), ước lượng từ điện áp. `0xFF` = không đọc được |
 | 3 | u32 | `epochUtc` | Giờ hiện tại của thiết bị |
 | 7 | i16 | `tzMinutes` | Múi giờ đang dùng (phút, Việt Nam = `420`) |
 | 9 | u16 | `pendingSegments` | Số segment chưa đồng bộ (kể cả segment đang ghi) |

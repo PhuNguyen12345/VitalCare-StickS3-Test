@@ -130,6 +130,7 @@ DeviceStatus App::deviceStatus() const {
     }
 
     status.batteryLevel = batteryLevel_;
+    status.charging = charging_;
 
     if (syncService_ != nullptr) {
         status.bleConnected = syncService_->connected();

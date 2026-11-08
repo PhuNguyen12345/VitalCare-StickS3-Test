@@ -124,7 +124,9 @@ m5sticks3-health-device/
 │   └── requirements.txt
 │
 ├── docs/                               (*)
-│   └── BLE_PROTOCOL.md                 giao thức BLE cho nhóm app Flutter
+│   ├── BLE_PROTOCOL.md                 giao thức BLE cho nhóm app Flutter
+│   ├── HARDWARE.md                     linh kiện, cấu tạo tầng, sơ đồ chân
+│   └── hardware/                       hình SVG của HARDWARE.md
 │
 └── test/
     ├── test_app_state/
@@ -146,7 +148,7 @@ m5sticks3-health-device/
 
 - **`ports/IInputSource.h`**: nút thật (`StickS3Board`) và lệnh Serial từ simulator (`SerialRemote`) đều sinh ra `AppEvent` qua cùng một port. Nhờ vậy `App` không phân biệt được nút thật với nút ảo.
 - **`board/I2cBusManager`**: RTC (Grove G9/G10) và Hat2 (G7/G6) dùng chung `Wire`, nên cần chuyển bus trước mỗi lần đọc. Các provider dùng chung một instance.
-- **`screens/Screen.h`**: lớp cơ sở của các screen, chứa các hàm vẽ tiêu đề và footer dùng chung.
+- **`screens/Screen.h`**: lớp cơ sở của các screen, chứa các hàm vẽ header (tiêu đề, Bluetooth, pin) và footer dùng chung.
 - **`MeasuringScreen`**: một lớp có tham số `Metric` thay cho ba trang đo riêng, vì Heart Rate và SpO2 gần như trùng code.
 - **`lib/devtools/`**: công cụ phát triển (mirror, nút ảo, `@DATA`), tách khỏi `ui` và `sticks3_platform` để bản build cho sản phẩm có thể tắt bằng `VC_ENABLE_DEVTOOLS=0`.
 - **`tools/`**: script Python chạy trên máy tính, không build vào firmware.

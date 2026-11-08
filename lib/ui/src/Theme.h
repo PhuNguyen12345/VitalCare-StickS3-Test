@@ -12,4 +12,10 @@ constexpr float FONT_VALUE = 3.0f;
 constexpr uint16_t BACKGROUND = TFT_BLACK;
 constexpr uint16_t FOOTER = TFT_DARKGREY;
 
+// Header: pin và Bluetooth
+constexpr uint8_t BATTERY_LOW = 20;
+constexpr uint8_t BATTERY_CRITICAL = 10;
+constexpr uint16_t BLE_CONNECTED = 0x4D9F;
+constexpr uint16_t BLE_SYNCING = TFT_ORANGE;
+
 }  // namespace Theme

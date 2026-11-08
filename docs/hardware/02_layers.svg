@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="590" viewBox="0 0 1240 590" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">
+<rect width="1240" height="590" fill="#ffffff"/>
+<text x="40" y="34" font-size="14" fill="#626973" text-anchor="start" font-weight="600">Mặt màn hình (hướng lên)</text>
+<rect x="260" y="56" width="320" height="10" rx="2" fill="#16213d" stroke="none" stroke-width="1"/>
+<rect x="150" y="66" width="580" height="92" rx="10" fill="#7d8187" stroke="#5f6368" stroke-width="2"/>
+<text x="440.0" y="118" font-size="20" fill="#fff" text-anchor="middle" font-weight="700">M5StickS3</text>
+<rect x="0" y="174" width="190" height="26" rx="0" fill="#e8641b" stroke="none" stroke-width="1"/>
+<rect x="690" y="174" width="90" height="26" rx="0" fill="#e8641b" stroke="none" stroke-width="1"/>
+<rect x="150" y="158" width="580" height="58" rx="6" fill="#9a9ea5" stroke="#7d8187" stroke-width="2"/>
+<text x="440.0" y="193" font-size="15" fill="#fff" text-anchor="middle" font-weight="700">Giá đeo</text>
+<rect x="250" y="216" width="380" height="14" rx="2" fill="#2c2e33" stroke="none" stroke-width="1"/>
+<rect x="190" y="230" width="500" height="74" rx="12" fill="#f1ead9" stroke="#cfc6b0" stroke-width="2"/>
+<rect x="250" y="304" width="380" height="10" rx="2" fill="#2c2e33" stroke="none" stroke-width="1"/>
+<text x="440.0" y="273" font-size="18" fill="#3a372f" text-anchor="middle" font-weight="700">RTC Unit</text>
+<rect x="170" y="314" width="540" height="16" rx="2" fill="#d9812f" stroke="#b5642b" stroke-width="1"/>
+<rect x="480" y="330" width="22" height="20" rx="1" fill="#2c2e33" stroke="none" stroke-width="1"/>
+<rect x="510" y="330" width="22" height="20" rx="1" fill="#2c2e33" stroke="none" stroke-width="1"/>
+<rect x="540" y="330" width="22" height="20" rx="1" fill="#2c2e33" stroke="none" stroke-width="1"/>
+<rect x="570" y="330" width="22" height="20" rx="1" fill="#2c2e33" stroke="none" stroke-width="1"/>
+<rect x="600" y="330" width="22" height="20" rx="1" fill="#2c2e33" stroke="none" stroke-width="1"/>
+<rect x="630" y="330" width="22" height="20" rx="1" fill="#2c2e33" stroke="none" stroke-width="1"/>
+<rect x="660" y="330" width="22" height="20" rx="1" fill="#2c2e33" stroke="none" stroke-width="1"/>
+<rect x="220" y="330" width="7" height="20" rx="1" fill="#a7acb3" stroke="none" stroke-width="1"/>
+<rect x="256" y="330" width="7" height="20" rx="1" fill="#a7acb3" stroke="none" stroke-width="1"/>
+<rect x="292" y="330" width="7" height="20" rx="1" fill="#a7acb3" stroke="none" stroke-width="1"/>
+<rect x="328" y="330" width="7" height="20" rx="1" fill="#a7acb3" stroke="none" stroke-width="1"/>
+<rect x="364" y="330" width="7" height="20" rx="1" fill="#a7acb3" stroke="none" stroke-width="1"/>
+<rect x="196" y="350" width="208" height="22" rx="2" fill="#d3221f" stroke="#a31513" stroke-width="1"/>
+<text x="300" y="366" font-size="13" fill="#fff" text-anchor="middle" font-weight="700">SEN-15219</text>
+<rect x="468" y="350" width="226" height="22" rx="2" fill="#6c2a94" stroke="#4d1c6c" stroke-width="1"/>
+<text x="581" y="366" font-size="13" fill="#fff" text-anchor="middle" font-weight="700">MAX30205</text>
+<rect x="40" y="394" width="800" height="42" rx="4" fill="#f6dcc8" stroke="#d9b49a" stroke-width="1" stroke-dasharray="6 4"/>
+<text x="440" y="421" font-size="15" fill="#7a5439" text-anchor="middle" font-weight="600">Da cổ tay</text>
+<rect x="730" y="74" width="16" height="74" rx="2" fill="#d9812f" stroke="#b5642b" stroke-width="1"/>
+<rect x="746" y="78" width="26" height="66" rx="2" fill="#2c2e33" stroke="none" stroke-width="1"/>
+<rect x="772" y="74" width="16" height="74" rx="2" fill="#d9812f" stroke="#b5642b" stroke-width="1"/>
+<path d="M 788 88 C 858 88, 858 318, 704 318" fill="none" stroke="#23262b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 788 97 C 864 97, 864 320, 704 320" fill="none" stroke="#c9b400" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 788 106 C 870 106, 870 322, 704 322" fill="none" stroke="#2f9e5b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 788 115 C 876 115, 876 324, 704 324" fill="none" stroke="#7c4fa3" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 788 124 C 882 124, 882 326, 704 326" fill="none" stroke="#3f7fd6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 788 133 C 888 133, 888 328, 704 328" fill="none" stroke="#d6322c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 150 100 C 80 100, 80 256, 190 256" fill="none" stroke="#23262b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 150 110 C 72 110, 72 265, 190 265" fill="none" stroke="#d6322c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 150 120 C 64 120, 64 274, 190 274" fill="none" stroke="#c9b400" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 150 130 C 56 130, 56 283, 190 283" fill="none" stroke="#8a9099" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 150 130 C 56 130, 56 283, 190 283" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="178" cy="112" r="13" fill="#20242a" stroke="none" stroke-width="1"/>
+<text x="178" y="117" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">1</text>
+<circle cx="178" cy="187" r="13" fill="#20242a" stroke="none" stroke-width="1"/>
+<text x="178" y="192" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">2</text>
+<circle cx="260" cy="223" r="13" fill="#20242a" stroke="none" stroke-width="1"/>
+<text x="260" y="228" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">3</text>
+<circle cx="222" cy="267" r="13" fill="#20242a" stroke="none" stroke-width="1"/>
+<text x="222" y="272" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">4</text>
+<circle cx="260" cy="309" r="13" fill="#20242a" stroke="none" stroke-width="1"/>
+<text x="260" y="314" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">3</text>
+<circle cx="400" cy="322" r="13" fill="#20242a" stroke="none" stroke-width="1"/>
+<text x="400" y="327" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">5</text>
+<circle cx="178" cy="361" r="13" fill="#20242a" stroke="none" stroke-width="1"/>
+<text x="178" y="366" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">6</text>
+<circle cx="717" cy="361" r="13" fill="#20242a" stroke="none" stroke-width="1"/>
+<text x="717" y="366" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">7</text>
+<circle cx="759" cy="60" r="13" fill="#20242a" stroke="none" stroke-width="1"/>
+<text x="759" y="65" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">8</text>
+<circle cx="84" cy="236" r="13" fill="#20242a" stroke="none" stroke-width="1"/>
+<text x="84" y="241" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">9</text>
+<text x="40" y="470" font-size="13" fill="#626973" text-anchor="start" font-weight="400">Hình minh họa theo chiều dài thân máy, không đúng tỉ lệ. Đầu bên trái là USB-C và Grove, đầu bên phải là cổng HAT2.</text>
+<rect x="880" y="40" width="344" height="420" rx="12" fill="#f4f5f7" stroke="none" stroke-width="1"/>
+<circle cx="906" cy="76" r="13" fill="#20242a" stroke="none" stroke-width="1"/>
+<text x="906" y="81" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">1</text>
+<text x="930" y="73" font-size="14" fill="#20242a" text-anchor="start" font-weight="700">M5StickS3</text>
+<text x="930" y="90" font-size="12" fill="#626973" text-anchor="start" font-weight="400">Vi điều khiển, màn hình, pin</text>
+<circle cx="906" cy="118" r="13" fill="#20242a" stroke="none" stroke-width="1"/>
+<text x="906" y="123" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">2</text>
+<text x="930" y="115" font-size="14" fill="#20242a" text-anchor="start" font-weight="700">Giá đeo + dây đeo</text>
+<text x="930" y="132" font-size="12" fill="#626973" text-anchor="start" font-weight="400">Giữ thiết bị trên cổ tay</text>
+<circle cx="906" cy="160" r="13" fill="#20242a" stroke="none" stroke-width="1"/>
+<text x="906" y="165" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">3</text>
+<text x="930" y="157" font-size="14" fill="#20242a" text-anchor="start" font-weight="700">Băng dính 2 mặt</text>
+<text x="930" y="174" font-size="12" fill="#626973" text-anchor="start" font-weight="400">RTC với M5StickS3, cảm biến với RTC</text>
+<circle cx="906" cy="202" r="13" fill="#20242a" stroke="none" stroke-width="1"/>
+<text x="906" y="207" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">4</text>
+<text x="930" y="199" font-size="14" fill="#20242a" text-anchor="start" font-weight="700">RTC Unit</text>
+<text x="930" y="216" font-size="12" fill="#626973" text-anchor="start" font-weight="400">Giữ giờ khi tắt nguồn</text>
+<circle cx="906" cy="244" r="13" fill="#20242a" stroke="none" stroke-width="1"/>
+<text x="906" y="249" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">5</text>
+<text x="930" y="241" font-size="14" fill="#20242a" text-anchor="start" font-weight="700">Board đục lỗ</text>
+<text x="930" y="258" font-size="12" fill="#626973" text-anchor="start" font-weight="400">Đế chung của 2 cảm biến</text>
+<circle cx="906" cy="286" r="13" fill="#20242a" stroke="none" stroke-width="1"/>
+<text x="906" y="291" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">6</text>
+<text x="930" y="283" font-size="14" fill="#20242a" text-anchor="start" font-weight="700">SEN-15219</text>
+<text x="930" y="300" font-size="12" fill="#626973" text-anchor="start" font-weight="400">Nhịp tim, SpO2</text>
+<circle cx="906" cy="328" r="13" fill="#20242a" stroke="none" stroke-width="1"/>
+<text x="906" y="333" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">7</text>
+<text x="930" y="325" font-size="14" fill="#20242a" text-anchor="start" font-weight="700">MAX30205</text>
+<text x="930" y="342" font-size="12" fill="#626973" text-anchor="start" font-weight="400">Nhiệt độ da</text>
+<circle cx="906" cy="370" r="13" fill="#20242a" stroke="none" stroke-width="1"/>
+<text x="906" y="375" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">8</text>
+<text x="930" y="367" font-size="14" fill="#20242a" text-anchor="start" font-weight="700">Đế chuyển HAT2</text>
+<text x="930" y="384" font-size="12" fill="#626973" text-anchor="start" font-weight="400">2×8, kèm 6 dây đi xuống</text>
+<circle cx="906" cy="412" r="13" fill="#20242a" stroke="none" stroke-width="1"/>
+<text x="906" y="417" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">9</text>
+<text x="930" y="409" font-size="14" fill="#20242a" text-anchor="start" font-weight="700">Cáp Grove</text>
+<text x="930" y="426" font-size="12" fill="#626973" text-anchor="start" font-weight="400">4 dây nối tới RTC</text>
+<rect x="40" y="498" width="42.8" height="34" rx="6" fill="#ffffff" stroke="#c9ced6" stroke-width="1"/>
+<text x="61.4" y="520" font-size="13" fill="#626973" text-anchor="middle" font-weight="400">Trên</text>
+<text x="97.8" y="521" font-size="16" fill="#626973" text-anchor="middle" font-weight="400">→</text>
+<rect x="112.8" y="498" width="83.8" height="34" rx="6" fill="#e7e9ed" stroke="#c9ced6" stroke-width="1"/>
+<text x="154.7" y="520" font-size="13" fill="#20242a" text-anchor="middle" font-weight="700">M5StickS3</text>
+<text x="211.6" y="521" font-size="16" fill="#626973" text-anchor="middle" font-weight="400">→</text>
+<rect x="226.6" y="498" width="75.6" height="34" rx="6" fill="#e7e9ed" stroke="#c9ced6" stroke-width="1"/>
+<text x="264.4" y="520" font-size="13" fill="#20242a" text-anchor="middle" font-weight="700">RTC Unit</text>
+<text x="317.2" y="521" font-size="16" fill="#626973" text-anchor="middle" font-weight="400">→</text>
+<rect x="332.2" y="498" width="174.0" height="34" rx="6" fill="#e7e9ed" stroke="#c9ced6" stroke-width="1"/>
+<text x="419.2" y="520" font-size="13" fill="#20242a" text-anchor="middle" font-weight="700">SEN-15219 + MAX30205</text>
+<text x="521.2" y="521" font-size="16" fill="#626973" text-anchor="middle" font-weight="400">→</text>
+<rect x="536.2" y="498" width="108.39999999999999" height="34" rx="6" fill="#ffffff" stroke="#c9ced6" stroke-width="1"/>
+<text x="590.4000000000001" y="520" font-size="13" fill="#626973" text-anchor="middle" font-weight="400">Dưới, sát da</text>
+</svg>

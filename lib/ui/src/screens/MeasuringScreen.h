@@ -47,7 +47,7 @@ private:
     void drawTemperature(M5Canvas& canvas, const AppViewModel& model) {
         const BodyTemperature& body = model.bodyTemperature;
 
-        drawTitle(canvas, "BODY TEMPERATURE", TFT_YELLOW);
+        drawHeader(canvas, "BODY TEMPERATURE", TFT_YELLOW, model.status);
 
         if (!model.reading.temperatureValid) {
             drawCentered(canvas, "MAX ERROR", TFT_RED, Theme::FONT_MESSAGE);
@@ -93,9 +93,9 @@ private:
         const HealthReading& reading = model.reading;
 
         if (isHeartRate) {
-            drawTitle(canvas, "HEART RATE", TFT_RED);
+            drawHeader(canvas, "HEART RATE", TFT_RED, model.status);
         } else {
-            drawTitle(canvas, "BLOOD OXYGEN", TFT_CYAN);
+            drawHeader(canvas, "BLOOD OXYGEN", TFT_CYAN, model.status);
         }
 
         if (!model.status.senInitialized) {

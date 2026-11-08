@@ -115,10 +115,16 @@ void TelemetryPrinter::printData(const AppViewModel& model, bool mirrorEnabled) 
         out_.print(" hr=err spo2=err conf=err status=err");
     }
 
+    if (model.status.batteryLevel == DeviceStatus::BATTERY_UNKNOWN) {
+        out_.print(" bat=err");
+    } else {
+        out_.printf(" bat=%u", model.status.batteryLevel);
+    }
+
     out_.printf(
-        " sen=%d bat=%u ble=%d sync=%d logseg=%u page=%s mirror=%d\n",
+        " chg=%d sen=%d ble=%d sync=%d logseg=%u page=%s mirror=%d\n",
+        model.status.charging ? 1 : 0,
         model.status.senInitialized ? 1 : 0,
-        model.status.batteryLevel,
         model.status.bleConnected ? 1 : 0,
         model.status.syncing ? 1 : 0,
         model.status.pendingSegments,

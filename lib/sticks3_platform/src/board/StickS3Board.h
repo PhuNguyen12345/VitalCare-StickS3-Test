@@ -2,6 +2,7 @@
 
 #include <M5Unified.h>
 
+#include "domain/DeviceStatus.h"
 #include "ports/IInputSource.h"
 
 // Khởi tạo phần cứng M5StickS3 và đọc nút thật
@@ -16,8 +17,11 @@ public:
 
     M5GFX& display() { return M5.Display; }
 
-    // 0..100 (%), 0 nếu không đọc được
+    // 0..100 (%), DeviceStatus::BATTERY_UNKNOWN nếu không đọc được.
+    // Quy đổi tuyến tính từ điện áp nên chỉ là ước lượng
     uint8_t batteryLevel();
+
+    bool isCharging();
 
 private:
     void push(AppEvent event);

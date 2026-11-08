@@ -165,6 +165,7 @@ class SimulatorApp:
         ("page", "Trang"),
         ("sen", "SEN"),
         ("bat", "Pin (%)"),
+        ("chg", "Đang sạc"),
         ("ble", "BLE"),
         ("sync", "Đang đồng bộ"),
         ("logseg", "Segment chờ đồng bộ"),

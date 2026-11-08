@@ -20,7 +20,7 @@ Ngữ cảnh cho session mới. Người dùng trao đổi bằng **tiếng Vi�
 
 - **Bộ điều khiển:** M5Stack **M5StickS3** (ESP32-S3, 8MB flash, LCD 240×135, pin 250 mAh), dùng PlatformIO, Arduino core 2.0.17, thư viện M5Unified/M5GFX.
 - Có 2 thiết bị: StickS3 là sản phẩm chính đeo tay; thiết bị màn hình 2.8 inch là prototype. **Mỗi thiết bị có một bộ cảm biến hàn cố định.**
-- **Đấu dây** (khai báo trong [include/BoardPins.h](include/BoardPins.h)):
+- **Đấu dây** (khai báo trong [include/BoardPins.h](include/BoardPins.h), sơ đồ và ảnh trong [docs/HARDWARE.md](docs/HARDWARE.md)):
 
   | Linh kiện | Kết nối |
   |---|---|
@@ -94,6 +94,7 @@ Chi tiết trong [STRUCTURE.md](STRUCTURE.md).
 - **Giữ `CORE_DEBUG_LEVEL=3`.** Mức 5 làm log hệ thống chen vào và hỏng frame mirror.
 - **Lần `settime` đầu tiên** sau khi chuyển sang lưu UTC tạo bước nhảy −7 giờ trong dữ liệu cũ, vì RTC trước đó giữ giờ Việt Nam.
 - **Nhiệt độ MAX30205 là nhiệt độ da** (khoảng 32–34 °C ở cổ tay). Không phải thân nhiệt.
+- **Phần trăm pin chỉ là ước lượng:** M5Unified quy đổi tuyến tính từ điện áp, nên số sụt theo tải và nhảy lên khi cắm sạc. `0xFF` (`DeviceStatus::BATTERY_UNKNOWN`) nghĩa là không đọc được pin.
 - **SpO2 từ SEN-15219 chưa hiệu chuẩn** cho vỏ thiết bị, chỉ dùng để tham khảo.
 - **Khởi tạo SEN mất khoảng 5 giây** (có `delay(4000)`). Sẽ là vấn đề khi làm ngủ sâu, vì mỗi lần thức là khởi động lại.
 - **`ble_logs/`, `captures/`, `.venv/`, `__pycache__/`** đều đã có trong `.gitignore`.
@@ -102,9 +103,9 @@ Chi tiết trong [STRUCTURE.md](STRUCTURE.md).
 
 Plan chi tiết và câu hỏi còn mở: [docs/PLAN_POWER_AND_MODES.md](docs/PLAN_POWER_AND_MODES.md).
 
-- **Đã xong:** refactor theo STRUCTURE.md, simulator, BLE realtime + batch (đã chạy thật trên thiết bị), quy tắc đánh giá mẫu, nhiệt độ cơ thể ước tính A3–A5 (CSV `#v3`, giao thức v2; **chưa chạy thử trên thiết bị**).
+- **Đã xong:** refactor theo STRUCTURE.md, simulator, BLE realtime + batch (đã chạy thật trên thiết bị), quy tắc đánh giá mẫu, nhiệt độ cơ thể ước tính A3–A5 (CSV `#v3`, giao thức v2; đã đo thử trên thiết bị, kết quả gần với nhiệt kế và được chấp nhận), header pin + Bluetooth trên mọi trang (**chưa chạy thử trên thiết bị**).
 - **Đang làm — bước 0, chuẩn hóa nhiệt độ cơ thể:**
-  - Việc kế tiếp: nạp và kiểm tra A3–A5 trên thiết bị; thu thêm số liệu hiệu chuẩn (nhiều người, nhiều điều kiện) để chốt độ lệch và ngưỡng.
+  - Việc kế tiếp: thu thêm số liệu hiệu chuẩn (nhiều người, nhiều điều kiện) để chốt độ lệch và ngưỡng.
   - Còn lại: `ble_client.py live --csv` cho thí nghiệm A1 (tự sinh nhiệt) và đường cong cân bằng đầy đủ (A2).
   - Đã có nhiệt kế điện tử đo miệng. Mốc tham chiếu: **nhiệt độ miệng, trung bình 36,57 °C** (Geneva 2019). Số đo hiệu chuẩn ghi trong [docs/temperature_calibration.csv](docs/temperature_calibration.csv); độ lệch tạm thời (miệng − cổ tay) khoảng **2,2 °C**, từ 2 lần đo khi cảm biến **đã cân bằng nhiệt**. Chỉ dùng các dòng ghi chú `da can bang`.
 - **Sau đó:** đo dòng tiêu thụ, rồi ngủ sâu + đo định kỳ + cửa sổ BLE; phiên live bằng nút bấm; cảnh báo; định danh thiết bị.

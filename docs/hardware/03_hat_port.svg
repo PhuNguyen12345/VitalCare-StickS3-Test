@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="360" viewBox="0 0 1240 360" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">
+<rect width="1240" height="360" fill="#ffffff"/>
+<text x="92" y="34" font-size="14" fill="#626973" text-anchor="start" font-weight="400">Nhìn từ mặt lưng, cổng HAT2 hướng lên trên. Các chân màu xám không dùng.</text>
+<rect x="95" y="69" width="126" height="82" rx="8" fill="#eceef1" stroke="#c9ced6" stroke-width="1"/>
+<text x="158.0" y="116" font-size="16" fill="#8a9099" text-anchor="middle" font-weight="600">G5</text>
+<rect x="227" y="69" width="126" height="82" rx="8" fill="#eceef1" stroke="#c9ced6" stroke-width="1"/>
+<text x="290.0" y="116" font-size="16" fill="#8a9099" text-anchor="middle" font-weight="600">G4</text>
+<rect x="359" y="69" width="126" height="82" rx="8" fill="#c9b400" stroke="none" stroke-width="1"/>
+<text x="422.0" y="106" font-size="19" fill="#20242a" text-anchor="middle" font-weight="700">G6</text>
+<text x="422.0" y="129" font-size="14" fill="#20242a" text-anchor="middle" font-weight="600">SCL</text>
+<rect x="491" y="69" width="126" height="82" rx="8" fill="#2f9e5b" stroke="none" stroke-width="1"/>
+<text x="554.0" y="106" font-size="19" fill="#fff" text-anchor="middle" font-weight="700">G7</text>
+<text x="554.0" y="129" font-size="14" fill="#fff" text-anchor="middle" font-weight="600">SDA</text>
+<rect x="623" y="69" width="126" height="82" rx="8" fill="#eceef1" stroke="#c9ced6" stroke-width="1"/>
+<text x="686.0" y="116" font-size="16" fill="#8a9099" text-anchor="middle" font-weight="600">G43</text>
+<rect x="755" y="69" width="126" height="82" rx="8" fill="#eceef1" stroke="#c9ced6" stroke-width="1"/>
+<text x="818.0" y="116" font-size="16" fill="#8a9099" text-anchor="middle" font-weight="600">G44</text>
+<rect x="887" y="69" width="126" height="82" rx="8" fill="#eceef1" stroke="#c9ced6" stroke-width="1"/>
+<text x="950.0" y="116" font-size="16" fill="#8a9099" text-anchor="middle" font-weight="600">G2</text>
+<rect x="1019" y="69" width="126" height="82" rx="8" fill="#eceef1" stroke="#c9ced6" stroke-width="1"/>
+<text x="1082.0" y="116" font-size="16" fill="#8a9099" text-anchor="middle" font-weight="600">G3</text>
+<rect x="95" y="157" width="126" height="82" rx="8" fill="#23262b" stroke="none" stroke-width="1"/>
+<text x="158.0" y="194" font-size="19" fill="#fff" text-anchor="middle" font-weight="700">GND</text>
+<text x="158.0" y="217" font-size="14" fill="#fff" text-anchor="middle" font-weight="600">Nối đất</text>
+<rect x="227" y="157" width="126" height="82" rx="8" fill="#eceef1" stroke="#c9ced6" stroke-width="1"/>
+<text x="290.0" y="204" font-size="16" fill="#8a9099" text-anchor="middle" font-weight="600">EXT5V</text>
+<rect x="359" y="157" width="126" height="82" rx="8" fill="#eceef1" stroke="#c9ced6" stroke-width="1"/>
+<text x="422.0" y="204" font-size="16" fill="#8a9099" text-anchor="middle" font-weight="600">G0</text>
+<rect x="491" y="157" width="126" height="82" rx="8" fill="#7c4fa3" stroke="none" stroke-width="1"/>
+<text x="554.0" y="194" font-size="19" fill="#fff" text-anchor="middle" font-weight="700">G1</text>
+<text x="554.0" y="217" font-size="14" fill="#fff" text-anchor="middle" font-weight="600">RST</text>
+<rect x="623" y="157" width="126" height="82" rx="8" fill="#3f7fd6" stroke="none" stroke-width="1"/>
+<text x="686.0" y="194" font-size="19" fill="#fff" text-anchor="middle" font-weight="700">G8</text>
+<text x="686.0" y="217" font-size="14" fill="#fff" text-anchor="middle" font-weight="600">MFIO</text>
+<rect x="755" y="157" width="126" height="82" rx="8" fill="#eceef1" stroke="#c9ced6" stroke-width="1"/>
+<text x="818.0" y="204" font-size="16" fill="#8a9099" text-anchor="middle" font-weight="600">BAT</text>
+<rect x="887" y="157" width="126" height="82" rx="8" fill="#d6322c" stroke="none" stroke-width="1"/>
+<text x="950.0" y="194" font-size="19" fill="#fff" text-anchor="middle" font-weight="700">3V3_L2</text>
+<text x="950.0" y="217" font-size="14" fill="#fff" text-anchor="middle" font-weight="600">Nguồn 3V3</text>
+<rect x="1019" y="157" width="126" height="82" rx="8" fill="#eceef1" stroke="#c9ced6" stroke-width="1"/>
+<text x="1082.0" y="204" font-size="16" fill="#8a9099" text-anchor="middle" font-weight="600">5VIN</text>
+<text x="158.0" y="262" font-size="13" fill="#626973" text-anchor="middle" font-weight="400">1</text>
+<text x="290.0" y="262" font-size="13" fill="#626973" text-anchor="middle" font-weight="400">2</text>
+<text x="422.0" y="262" font-size="13" fill="#626973" text-anchor="middle" font-weight="400">3</text>
+<text x="554.0" y="262" font-size="13" fill="#626973" text-anchor="middle" font-weight="400">4</text>
+<text x="686.0" y="262" font-size="13" fill="#626973" text-anchor="middle" font-weight="400">5</text>
+<text x="818.0" y="262" font-size="13" fill="#626973" text-anchor="middle" font-weight="400">6</text>
+<text x="950.0" y="262" font-size="13" fill="#626973" text-anchor="middle" font-weight="400">7</text>
+<text x="1082.0" y="262" font-size="13" fill="#626973" text-anchor="middle" font-weight="400">8</text>
+<text x="78" y="116" font-size="13" fill="#626973" text-anchor="end" font-weight="400">Hàng 1</text>
+<text x="78" y="204" font-size="13" fill="#626973" text-anchor="end" font-weight="400">Hàng 2</text>
+<text x="78" y="262" font-size="13" fill="#626973" text-anchor="end" font-weight="400">Cột</text>
+<text x="92" y="306" font-size="13" fill="#626973" text-anchor="start" font-weight="400">Màu dây thật:</text>
+<rect x="188" y="294" width="26" height="14" rx="3" fill="#23262b" stroke="none" stroke-width="1"/>
+<text x="221" y="306" font-size="13" fill="#20242a" text-anchor="start" font-weight="400">Đen</text>
+<rect x="268" y="294" width="26" height="14" rx="3" fill="#d6322c" stroke="none" stroke-width="1"/>
+<text x="301" y="306" font-size="13" fill="#20242a" text-anchor="start" font-weight="400">Đỏ</text>
+<rect x="340" y="294" width="26" height="14" rx="3" fill="#2f9e5b" stroke="none" stroke-width="1"/>
+<text x="373" y="306" font-size="13" fill="#20242a" text-anchor="start" font-weight="400">Xanh lá</text>
+<rect x="452" y="294" width="26" height="14" rx="3" fill="#c9b400" stroke="none" stroke-width="1"/>
+<text x="485" y="306" font-size="13" fill="#20242a" text-anchor="start" font-weight="400">Vàng</text>
+<rect x="540" y="294" width="26" height="14" rx="3" fill="#7c4fa3" stroke="none" stroke-width="1"/>
+<text x="573" y="306" font-size="13" fill="#20242a" text-anchor="start" font-weight="400">Tím</text>
+<rect x="620" y="294" width="26" height="14" rx="3" fill="#3f7fd6" stroke="none" stroke-width="1"/>
+<text x="653" y="306" font-size="13" fill="#20242a" text-anchor="start" font-weight="400">Xanh dương</text>
+</svg>

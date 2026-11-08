@@ -30,7 +30,10 @@ public:
     void update(uint32_t nowMs);
     void handleEvent(AppEvent event);
 
-    void setBatteryLevel(uint8_t level) { batteryLevel_ = level; }
+    void setBattery(uint8_t level, bool charging) {
+        batteryLevel_ = level;
+        charging_ = charging;
+    }
 
     ScreenPage page() const { return state_.page; }
 
@@ -52,6 +55,7 @@ private:
     SyncService* syncService_;
     BodyTemperatureEstimator* temperatureEstimator_;
     LogFn logger_ = nullptr;
-    uint8_t batteryLevel_ = 0;
+    uint8_t batteryLevel_ = DeviceStatus::BATTERY_UNKNOWN;
+    bool charging_ = false;
     AppState state_;
 };

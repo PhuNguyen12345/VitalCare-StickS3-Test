@@ -122,10 +122,14 @@ def format_epoch(epoch, tz_minutes=None):
     return moment.strftime("%Y-%m-%d %H:%M:%S")
 
 
+BATTERY_UNKNOWN = 0xFF
+
+
 def print_status(status):
     print(f"  Phiên bản giao thức : {status['version']}")
     print(f"  Cờ                 : {', '.join(flag_names(status['flags'], STATUS_FLAGS))}")
-    print(f"  Pin                : {status['battery']}%")
+    battery = "không rõ" if status["battery"] == BATTERY_UNKNOWN else f"{status['battery']}%"
+    print(f"  Pin                : {battery}")
     print(f"  Giờ thiết bị       : {format_epoch(status['epoch'], status['tz_minutes'])} (UTC{status['tz_minutes'] / 60:+g})")
     print(f"  Segment chờ sync   : {status['pending_segments']} ({status['pending_bytes']} byte)")
     print(f"  Bộ nhớ trống       : {status['fs_free_bytes'] // 1024} KB")
