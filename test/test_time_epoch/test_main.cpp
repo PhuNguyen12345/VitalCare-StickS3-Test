@@ -6,6 +6,15 @@
 void setUp() {}
 void tearDown() {}
 
+// gmtime_r là hàm POSIX, Windows (MinGW/UCRT) chỉ có gmtime_s với thứ tự tham số đảo ngược
+static void utcFromEpoch(time_t raw, struct tm& out) {
+#ifdef _WIN32
+    gmtime_s(&out, &raw);
+#else
+    gmtime_r(&raw, &out);
+#endif
+}
+
 static void assertTime(uint16_t y, uint8_t mo, uint8_t d, uint8_t h, uint8_t mi, uint8_t s, const TimeInfo& t) {
     TEST_ASSERT_EQUAL_UINT16(y, t.year);
     TEST_ASSERT_EQUAL_UINT8(mo, t.month);
@@ -31,7 +40,7 @@ void test_round_trip_matches_libc() {
 
         time_t raw = (time_t)epoch;
         struct tm expected;
-        gmtime_r(&raw, &expected);
+        utcFromEpoch(raw, expected);
 
         TEST_ASSERT_EQUAL_INT(expected.tm_year + 1900, t.year);
         TEST_ASSERT_EQUAL_INT(expected.tm_mon + 1, t.month);
