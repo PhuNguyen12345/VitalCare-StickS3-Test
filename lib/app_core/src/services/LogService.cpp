@@ -65,7 +65,7 @@ void LogService::writeRecord(uint32_t nowMs, const BodyTemperature& body, uint32
         record.temperatureX100 = (int16_t)lroundf(temperatureSum_ / temperatureCount_ * 100.0f);
     }
 
-    if (body.stable()) {
+    if (body.hasEstimate()) {
         record.bodyTemperatureX100 = (int16_t)lroundf(body.bodyC * 100.0f);
     }
 

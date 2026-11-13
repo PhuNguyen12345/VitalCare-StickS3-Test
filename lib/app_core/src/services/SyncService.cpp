@@ -305,7 +305,7 @@ void SyncService::publishLive(uint32_t nowMs, const HealthReading& reading, cons
         sample.temperatureX100 = (int16_t)lroundf(reading.temperatureC * 100.0f);
     }
 
-    if (body.stable()) {
+    if (body.hasEstimate()) {
         sample.bodyTemperatureX100 = (int16_t)lroundf(body.bodyC * 100.0f);
     }
 

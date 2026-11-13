@@ -13,6 +13,25 @@ public:
 
     TwoWire& wire() { return wire_; }
 
+    // ======================================================
+    // Tự kiểm tra bus (chẩn đoán đứt dây / mất nguồn cảm biến)
+    // ======================================================
+
+    struct BusCheck {
+        bool sdaPulledUp = false;  // Có điện trở kéo lên (board cảm biến đang có nguồn)
+        bool sclPulledUp = false;
+        uint8_t found = 0;         // Số địa chỉ phản hồi trong danh sách
+    };
+
+    // Đo mức nghỉ của SDA/SCL rồi dò các địa chỉ, in kết quả ra Serial
+    BusCheck check(
+        const char* name,
+        uint8_t sda,
+        uint8_t scl,
+        const uint8_t* addresses,
+        size_t count
+    );
+
 private:
     static constexpr uint8_t NO_PIN = 255;
 

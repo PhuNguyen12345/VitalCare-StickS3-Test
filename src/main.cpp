@@ -182,6 +182,19 @@ void setup() {
 
     app.begin(millis());
 
+    // Chẩn đoán phần cứng: dây và nguồn của cụm cảm biến trên Hat2.
+    // Chạy sau khi khởi tạo cảm biến: MAX32664 (SEN-15219) chỉ trả lời I2C
+    // sau khi được đưa vào chế độ ứng dụng qua chân RST/MFIO
+    const uint8_t hatAddresses[] = {BoardPins::MAX_ADDRESS, BoardPins::SEN_ADDRESS};
+
+    i2cBus.check(
+        "Hat2",
+        BoardPins::HAT_SDA,
+        BoardPins::HAT_SCL,
+        hatAddresses,
+        sizeof(hatAddresses)
+    );
+
     // Mặc định hiển thị đồng hồ
     app.consumeRedrawRequest();
     ui.render(app.viewModel());

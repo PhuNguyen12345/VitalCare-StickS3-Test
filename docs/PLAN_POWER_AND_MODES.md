@@ -137,7 +137,7 @@ Không có phép cộng hằng số nào biến nhiệt độ da cổ tay thành
 |---|---|---|
 | A1 | **Thí nghiệm tự sinh nhiệt:** để thiết bị trên bàn (không đeo), so sánh số đo khi màn hình/BLE bật và khi tắt | Biết nhiệt tỏa ra từ chính thiết bị có làm sai số đo không |
 | A2 | **Thí nghiệm thời gian cân bằng:** đeo lên tay, ghi số đo mỗi giây trong 10–15 phút | Biết cần chờ bao lâu, chọn ngưỡng "đã ổn định" |
-| A3 | ✅ **Phát hiện cân bằng nhiệt:** độ dốc (hồi quy tuyến tính) trong 3 phút gần nhất ≤ 0,05 °C/phút. Chưa ổn định thì bật cờ `TEMP_UNSTABLE` | Không báo số khi cảm biến chưa cân bằng |
+| A3 | ✅ **Phát hiện cân bằng nhiệt:** độ dốc (hồi quy tuyến tính) trong 3 phút gần nhất ≤ 0,05 °C/phút. Chưa ổn định thì bật cờ `TEMP_UNSTABLE`. **Cập nhật 12/11:** có số tạm thời sau 1 phút đeo, dự đoán nhiệt độ da lúc cân bằng (hằng số thời gian 6 phút, rút từ 2 lần đeo thật) | Có số nhanh như đồng hồ thông minh, vẫn đánh dấu là số tạm thời |
 | A4 | ✅ **Phát hiện không đeo:** nhiệt độ da < 30 °C thì bật cờ `LOOSE` và bắt đầu lại cửa sổ cân bằng | Tránh ghi nhiệt độ của không khí |
 | A5 | ✅ **Nhiệt độ cơ thể ước tính** = trung bình da 1 phút + độ lệch (mặc định 2,2 °C). Hiệu chuẩn qua BLE (`CALIBRATE_TEMP`, `SET_TEMP_OFFSET`), lưu NVS. Chưa hiệu chuẩn thì bật cờ `TEMP_UNCALIBRATED` | Có con số để hiển thị, ghi rõ là ước tính |
 

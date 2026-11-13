@@ -7,8 +7,9 @@
 #include "domain/HealthReading.h"
 #include "ports/IConfigRepository.h"
 
-// Ước tính nhiệt độ cơ thể = trung bình da 1 phút + độ lệch,
-// chỉ khi đang đeo và đã cân bằng nhiệt (xem TemperatureThresholds)
+// Ước tính nhiệt độ cơ thể = nhiệt độ da + độ lệch (xem TemperatureThresholds):
+// - sau 1 phút đeo: số tạm thời, nhiệt độ da được dự đoán tới lúc cân bằng
+// - khi đã cân bằng: trung bình da 1 phút, dùng được để hiệu chuẩn
 class BodyTemperatureEstimator {
 public:
     // config có thể là nullptr (dùng khi test): độ lệch không được lưu bền
@@ -37,6 +38,9 @@ private:
 
     void addSample(uint32_t nowMs, float skinC);
     void evaluate();
+
+    // Độ dốc (°C/phút) bằng hồi quy tuyến tính trên các mẫu từ vị trí first tới cuối
+    float slopeFrom(size_t first) const;
     void resetWindow();
 
     IConfigRepository* config_;
@@ -50,4 +54,7 @@ private:
 
     // Trung bình da 1 phút gần nhất (dùng cho cả ước tính và hiệu chuẩn)
     float skinAverageC_ = NAN;
+
+    // Nhiệt độ da dùng để tính nhiệt độ cơ thể (đã dự đoán nếu chưa cân bằng)
+    float skinEstimateC_ = NAN;
 };

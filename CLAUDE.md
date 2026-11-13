@@ -30,7 +30,7 @@ Ngữ cảnh cho session mới. Người dùng trao đổi bằng **tiếng Vi�
 
   - `I2cBusManager` chuyển `Wire` qua lại giữa hai bus trước mỗi lần đọc.
   - MAX30205 đo **da cổ tay, mặt mu tay**.
-- LCD từng bị vỡ. **Simulator** trên máy tính phản chiếu màn hình và có nút ảo, dùng được cả khi LCD hỏng.
+- LCD từng bị vỡ, đã thay màn hình mới (11/2026). **Simulator** trên máy tính phản chiếu màn hình và có nút ảo, vẫn hữu ích để xem log và chụp màn hình.
 
 ## Kiến trúc
 
@@ -81,7 +81,7 @@ Chi tiết trong [STRUCTURE.md](STRUCTURE.md).
   - `conf` là độ tin cậy của **nhịp tim**.
   - Cờ: `BIO_INVALID` (4), `SPO2_INVALID` (32).
 - **Nhiệt độ cơ thể ước tính:** `BodyTemperatureEstimator` + `TemperatureThresholds` trong [BodyTemperature.h](lib/app_core/src/domain/BodyTemperature.h). Dùng chung cho màn hình, gói `live` (byte 14) và CSV (`tb100`).
-  - Cơ thể = trung bình da 1 phút + độ lệch (mặc định 2,2 °C), chỉ khi **đã cân bằng**: độ dốc 3 phút ≤ 0,05 °C/phút. Da < 30 °C thì coi là không đeo.
+  - Cơ thể = nhiệt độ da + độ lệch (mặc định 2,2 °C). **Có số sau 1 phút đeo** (yêu cầu của giáo viên: lên số nhanh như đồng hồ thông minh): khi chưa cân bằng, nhiệt độ da được dự đoán = trung bình 1 phút + 6 phút × độ dốc (bù 0–2,5 °C), cờ `TEMP_UNSTABLE`. **Đã cân bằng** (độ dốc 3 phút ≤ 0,05 °C/phút) thì dùng trung bình 1 phút; chỉ lúc này mới cho hiệu chuẩn. Da < 30 °C thì coi là không đeo.
   - Cờ: `LOOSE` (8, không đeo), `TEMP_UNSTABLE` (64), `TEMP_UNCALIBRATED` (128).
   - Hiệu chuẩn bằng lệnh BLE `CALIBRATE_TEMP` (nhiệt độ miệng tham chiếu) hoặc `SET_TEMP_OFFSET`; độ lệch lưu NVS. Công cụ: `ble_client.py calibrate --ref 36.4`.
 - **Nghiệp vụ:**
@@ -91,7 +91,7 @@ Chi tiết trong [STRUCTURE.md](STRUCTURE.md).
 
 ## Lưu ý dễ vấp
 
-- **Mở cổng Serial là reset chip** (`rst:0x15 USB_UART_CHIP_RESET`): mỗi lần simulator, Serial Monitor hay esptool kết nối, thiết bị khởi động lại, mở segment mới và bộ ước tính nhiệt độ chạy lại từ đầu (3 phút). Dòng `Boot: reset reason = ...` cho biết lý do. Panic in ra UART0 nên không thấy qua USB; core dump lưu ở partition `coredump` (`0x7F0000`), đọc bằng `esptool read_flash`.
+- **Mở cổng Serial là reset chip** (`rst:0x15 USB_UART_CHIP_RESET`): mỗi lần simulator, Serial Monitor hay esptool kết nối, thiết bị khởi động lại, mở segment mới và bộ ước tính nhiệt độ chạy lại từ đầu (1 phút mới có số). Dòng `Boot: reset reason = ...` cho biết lý do. Panic in ra UART0 nên không thấy qua USB; core dump lưu ở partition `coredump` (`0x7F0000`), đọc bằng `esptool read_flash`.
 - **Giữ `CORE_DEBUG_LEVEL=3`.** Mức 5 làm log hệ thống chen vào và hỏng frame mirror.
 - **Lần `settime` đầu tiên** sau khi chuyển sang lưu UTC tạo bước nhảy −7 giờ trong dữ liệu cũ, vì RTC trước đó giữ giờ Việt Nam.
 - **Nhiệt độ MAX30205 là nhiệt độ da** (khoảng 32–34 °C ở cổ tay). Không phải thân nhiệt.

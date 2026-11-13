@@ -64,19 +64,26 @@ private:
             return;
         }
 
-        // Đang đeo nhưng chưa cân bằng nhiệt: chưa hiện số
-        if (!body.stable()) {
+        // Mới đeo, chưa đủ 1 phút: chưa có số
+        if (!body.hasEstimate()) {
             drawCentered(canvas, "--.- C", TFT_DARKGREY, Theme::FONT_VALUE, -7);
 
-            snprintf(detailText, sizeof(detailText), "Stabilizing (%.1f C)", model.reading.temperatureC);
+            snprintf(detailText, sizeof(detailText), "Measuring (%.1f C)", model.reading.temperatureC);
             drawCentered(canvas, detailText, TFT_YELLOW, Theme::FONT_SMALL, 27);
             return;
         }
 
-        // "~": nhiệt độ ước tính, làm tròn 0.1 °C
+        // "~": nhiệt độ ước tính, làm tròn 0.1 °C.
+        // Trắng: số tạm thời (chưa cân bằng nhiệt); xanh: đã cân bằng
         char valueText[20];
         snprintf(valueText, sizeof(valueText), "~%.1f C", body.bodyC);
-        drawCentered(canvas, valueText, TFT_GREEN, Theme::FONT_VALUE, -7);
+        drawCentered(canvas, valueText, body.stable() ? TFT_GREEN : TFT_WHITE, Theme::FONT_VALUE, -7);
+
+        if (!body.stable()) {
+            snprintf(detailText, sizeof(detailText), "Skin %.2f C, settling", model.reading.temperatureC);
+            drawCentered(canvas, detailText, TFT_YELLOW, Theme::FONT_SMALL, 27);
+            return;
+        }
 
         snprintf(
             detailText,

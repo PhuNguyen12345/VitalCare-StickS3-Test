@@ -45,7 +45,7 @@ void TelemetryPrinter::printReadable(const AppViewModel& model) {
 
     out_.print(" | Body: ");
 
-    if (model.bodyTemperature.stable()) {
+    if (model.bodyTemperature.hasEstimate()) {
         out_.print(model.bodyTemperature.bodyC, 2);
         out_.print(" C");
     } else {
@@ -91,7 +91,7 @@ void TelemetryPrinter::printData(const AppViewModel& model, bool mirrorEnabled) 
 
     out_.print(" body=");
 
-    if (model.bodyTemperature.stable()) {
+    if (model.bodyTemperature.hasEstimate()) {
         out_.print(model.bodyTemperature.bodyC, 2);
     } else {
         out_.print("err");

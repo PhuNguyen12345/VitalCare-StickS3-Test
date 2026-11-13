@@ -29,14 +29,32 @@ void MeasurementService::update(uint32_t nowMs) {
     for (size_t i = 0; i < sourceCount_; i++) {
         Source& source = sources_[i];
 
-        if (source.ready && nowMs - source.lastReadMs >= source.intervalMs) {
+        if (source.ready && nowMs - source.lastReadMs >= intervalFor(source)) {
             readSource(source, nowMs);
         }
     }
 }
 
+uint32_t MeasurementService::currentIntervalMs(size_t index) const {
+    return index < sourceCount_ ? intervalFor(sources_[index]) : 0;
+}
+
+uint32_t MeasurementService::intervalFor(const Source& source) {
+    if (source.failures >= FAILURES_BEFORE_BACKOFF && source.intervalMs < RETRY_INTERVAL_MS) {
+        return RETRY_INTERVAL_MS;
+    }
+
+    return source.intervalMs;
+}
+
 void MeasurementService::readSource(Source& source, uint32_t nowMs) {
     source.lastReadMs = nowMs;
-    source.provider->read(reading_);
+
+    if (source.provider->read(reading_)) {
+        source.failures = 0;
+    } else if (source.failures < UINT8_MAX) {
+        source.failures++;
+    }
+
     source.provider->reportStatus(status_);
 }

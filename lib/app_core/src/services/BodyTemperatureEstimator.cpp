@@ -72,64 +72,92 @@ void BodyTemperatureEstimator::addSample(uint32_t nowMs, float skinC) {
 void BodyTemperatureEstimator::evaluate() {
     const Sample& newest = samples_[sampleCount_ - 1];
 
-    // Trung bình 1 phút gần nhất
-    float sum = 0;
-    size_t count = 0;
+    // Các mẫu trong 1 phút gần nhất
+    size_t recentFirst = sampleCount_ - 1;
 
-    for (size_t i = 0; i < sampleCount_; i++) {
-        if (newest.ms - samples_[i].ms <= AVERAGE_WINDOW_MS) {
-            sum += samples_[i].skinC;
-            count++;
-        }
+    while (recentFirst > 0 && newest.ms - samples_[recentFirst - 1].ms <= AVERAGE_WINDOW_MS) {
+        recentFirst--;
     }
 
-    skinAverageC_ = sum / count;
+    float sum = 0;
 
-    // Cần đủ khoảng 3 phút dữ liệu liên tục (trừ 1 chu kỳ lấy mẫu vì lệch thời gian)
+    for (size_t i = recentFirst; i < sampleCount_; i++) {
+        sum += samples_[i].skinC;
+    }
+
+    skinAverageC_ = sum / (sampleCount_ - recentFirst);
+
     uint32_t span = newest.ms - samples_[0].ms;
 
-    if (span + SAMPLE_INTERVAL_MS < STABLE_WINDOW_MS) {
-        current_.state = BodyTemperatureState::Stabilizing;
+    // Chưa đủ 1 phút: chưa có số
+    if (span < FIRST_ESTIMATE_MS) {
+        current_.state = BodyTemperatureState::Measuring;
+        skinEstimateC_ = NAN;
         current_.bodyC = NAN;
         return;
     }
 
-    // Độ dốc (°C/phút) bằng hồi quy tuyến tính, ít bị nhiễu hơn so với lấy đầu - cuối
+    // Đã cân bằng: đủ khoảng 3 phút dữ liệu (trừ 1 chu kỳ lấy mẫu vì lệch thời gian)
+    // và độ dốc trên cả cửa sổ đủ nhỏ
+    bool fullWindow = span + SAMPLE_INTERVAL_MS >= STABLE_WINDOW_MS;
+
+    if (fullWindow && fabsf(slopeFrom(0)) <= MAX_STABLE_RATE_C_PER_MIN) {
+        current_.state = BodyTemperatureState::Stable;
+        skinEstimateC_ = skinAverageC_;
+        current_.bodyC = skinEstimateC_ + current_.offsetC;
+        return;
+    }
+
+    // Chưa cân bằng: dự đoán nhiệt độ da khi cân bằng từ độ dốc 1 phút gần nhất.
+    // Chỉ bù khi da đang ấm lên, và giới hạn để nhiễu không đẩy số quá xa
+    float correction = WARMUP_TIME_CONSTANT_MIN * slopeFrom(recentFirst);
+
+    if (correction < 0) {
+        correction = 0;
+    } else if (correction > MAX_WARMUP_CORRECTION_C) {
+        correction = MAX_WARMUP_CORRECTION_C;
+    }
+
+    current_.state = BodyTemperatureState::Stabilizing;
+    skinEstimateC_ = skinAverageC_ + correction;
+    current_.bodyC = skinEstimateC_ + current_.offsetC;
+}
+
+float BodyTemperatureEstimator::slopeFrom(size_t first) const {
+    size_t count = sampleCount_ - first;
+
+    if (count < 2) {
+        return 0;
+    }
+
+    // Hồi quy tuyến tính, ít bị nhiễu hơn so với lấy đầu - cuối
     float meanX = 0;
     float meanY = 0;
 
-    for (size_t i = 0; i < sampleCount_; i++) {
-        meanX += (samples_[i].ms - samples_[0].ms) / 60000.0f;
+    for (size_t i = first; i < sampleCount_; i++) {
+        meanX += (samples_[i].ms - samples_[first].ms) / 60000.0f;
         meanY += samples_[i].skinC;
     }
 
-    meanX /= sampleCount_;
-    meanY /= sampleCount_;
+    meanX /= count;
+    meanY /= count;
 
     float covariance = 0;
     float variance = 0;
 
-    for (size_t i = 0; i < sampleCount_; i++) {
-        float dx = (samples_[i].ms - samples_[0].ms) / 60000.0f - meanX;
+    for (size_t i = first; i < sampleCount_; i++) {
+        float dx = (samples_[i].ms - samples_[first].ms) / 60000.0f - meanX;
         covariance += dx * (samples_[i].skinC - meanY);
         variance += dx * dx;
     }
 
-    float slope = variance > 0 ? covariance / variance : 0;
-
-    if (fabsf(slope) > MAX_STABLE_RATE_C_PER_MIN) {
-        current_.state = BodyTemperatureState::Stabilizing;
-        current_.bodyC = NAN;
-        return;
-    }
-
-    current_.state = BodyTemperatureState::Stable;
-    current_.bodyC = skinAverageC_ + current_.offsetC;
+    return variance > 0 ? covariance / variance : 0;
 }
 
 void BodyTemperatureEstimator::resetWindow() {
     sampleCount_ = 0;
     skinAverageC_ = NAN;
+    skinEstimateC_ = NAN;
     current_.bodyC = NAN;
 }
 
@@ -153,8 +181,8 @@ bool BodyTemperatureEstimator::setOffset(float offsetC) {
         config_->setTempOffsetX100((int16_t)lroundf(offsetC * 100.0f));
     }
 
-    if (current_.stable()) {
-        current_.bodyC = skinAverageC_ + offsetC;
+    if (current_.hasEstimate()) {
+        current_.bodyC = skinEstimateC_ + offsetC;
     }
 
     return true;
@@ -168,7 +196,7 @@ void BodyTemperatureEstimator::resetOffset() {
         config_->clearTempOffset();
     }
 
-    if (current_.stable()) {
-        current_.bodyC = skinAverageC_ + DEFAULT_OFFSET_C;
+    if (current_.hasEstimate()) {
+        current_.bodyC = skinEstimateC_ + DEFAULT_OFFSET_C;
     }
 }

@@ -52,12 +52,12 @@ Service: **`06b40001-765e-4d79-a126-f95ef3affd61`**
 | 10 | u8 | `fingerStatus` | 0 = không có vật, 1 = chưa sẵn sàng, 2 = có vật, **3 = có ngón tay** |
 | 11 | u8 | `flags` | Xem [mục 3.5](#35-bit-flags-của-live-và-bản-ghi) |
 | 12 | u16 | `seq` | Tăng 1 mỗi gói, dùng để phát hiện gói bị mất |
-| 14 | i16 | `bodyTemperatureX100` | Nhiệt độ **cơ thể ước tính** × 100 (xem [mục 3.7](#37-nhiệt-độ-cơ-thể-ước-tính)). **`-32768` = chưa có** (chưa cân bằng nhiệt / không đeo) |
+| 14 | i16 | `bodyTemperatureX100` | Nhiệt độ **cơ thể ước tính** × 100 (xem [mục 3.7](#37-nhiệt-độ-cơ-thể-ước-tính)). **`-32768` = chưa có** (mới đeo dưới 1 phút / không đeo) |
 
 Gói `live` luôn mang **giá trị thô**, kèm cờ cho biết giá trị nào dùng được (quy tắc ở [mục 3.5](#35-bit-flags-của-live-và-bản-ghi)):
 - Chỉ hiển thị nhịp tim khi bit `BIO_INVALID` **tắt**.
 - Chỉ hiển thị SpO2 khi bit `SPO2_INVALID` **tắt**.
-- Chỉ hiển thị nhiệt độ cơ thể khi bit `TEMP_UNSTABLE` **tắt**. Nếu bit `TEMP_UNCALIBRATED` bật, ghi chú "chưa hiệu chuẩn".
+- Hiển thị nhiệt độ cơ thể khi trường này khác `-32768`. Nếu bit `TEMP_UNSTABLE` bật, đây là **số tạm thời** (chưa cân bằng nhiệt), nên ghi chú "đang đo". Nếu bit `TEMP_UNCALIBRATED` bật, ghi chú "chưa hiệu chuẩn".
 
 ### 3.2 `status` — 19 byte
 
@@ -126,7 +126,7 @@ Mỗi gói gồm header 5 byte và payload:
 | `0x08` | `LOOSE` | Không đeo hoặc đeo lỏng: nhiệt độ da dưới 30 °C |
 | `0x10` | `ALERT` | Dự phòng: cảnh báo vượt ngưỡng |
 | `0x20` | `SPO2_INVALID` | SpO2 không hợp lệ: thuật toán chưa tính xong (`spo2 = 0`) hoặc nhịp tim không hợp lệ |
-| `0x40` | `TEMP_UNSTABLE` | Chưa có nhiệt độ cơ thể: chưa cân bằng nhiệt hoặc không đeo |
+| `0x40` | `TEMP_UNSTABLE` | Chưa cân bằng nhiệt: nhiệt độ cơ thể là số tạm thời (đã dự đoán), hoặc chưa có (dưới 1 phút / không đeo) |
 | `0x80` | `TEMP_UNCALIBRATED` | Nhiệt độ cơ thể dùng độ lệch mặc định, chưa hiệu chuẩn |
 
 Cộng các giá trị lại. Ví dụ `36` (= 4 + 32) nghĩa là không có ngón tay; `128` nghĩa là mọi chỉ số đều có, nhưng nhiệt độ cơ thể chưa được hiệu chuẩn.
@@ -157,7 +157,7 @@ ts,t100,tb100,hr,spo2,conf,flags
 |---|---|
 | `ts` | Epoch UTC (giây) ở cuối cửa sổ 10 giây |
 | `t100` | Nhiệt độ **da** trung bình × 100 (`0` nếu `TEMP_INVALID`) |
-| `tb100` | Nhiệt độ **cơ thể ước tính** × 100 lúc ghi bản ghi (`0` nếu `TEMP_UNSTABLE`) |
+| `tb100` | Nhiệt độ **cơ thể ước tính** × 100 lúc ghi bản ghi (`0` nếu chưa có). Có cờ `TEMP_UNSTABLE` thì là số tạm thời |
 | `hr`, `conf` | Trung bình các mẫu nhịp tim hợp lệ (`0` nếu `BIO_INVALID`) |
 | `spo2` | Trung bình các mẫu SpO2 hợp lệ, tính riêng với nhịp tim (`0` nếu `SPO2_INVALID`) |
 | `flags` | Như [mục 3.5](#35-bit-flags-của-live-và-bản-ghi) |
@@ -179,13 +179,20 @@ Mỗi segment khoảng 16 KB, tương đương khoảng 600 bản ghi hay 1,7 gi
 MAX30205 đo **nhiệt độ da cổ tay**. Thiết bị ước tính nhiệt độ cơ thể, định nghĩa là **tương đương nhiệt độ đo ở miệng** (mốc tham chiếu: trung bình 36,57 °C, Geneva và cộng sự 2019):
 
 ```
-nhiệt độ cơ thể = trung bình nhiệt độ da 1 phút gần nhất + độ lệch
+nhiệt độ cơ thể = nhiệt độ da + độ lệch
+
+nhiệt độ da:
+  - đã cân bằng:    trung bình 1 phút gần nhất
+  - chưa cân bằng:  trung bình 1 phút gần nhất + 6 phút × độ dốc (°C/phút), phần bù từ 0 đến 2,5 °C
 ```
+
+Phần bù dự đoán nhiệt độ da lúc cân bằng, theo mô hình làm ấm dạng mũ với hằng số thời gian 6 phút. Hằng số này khớp 2 lần đeo thật (03/11 và 04/11). Kiểm tra trên đúng hai lần đeo đó, từ phút 1 trở đi số tạm thời lệch so với lúc cân bằng chủ yếu trong ±0,5 °C (lớn nhất khoảng 0,7 °C). Nếu không dự đoán thì thấp hơn khoảng 2 °C.
 
 | Trạng thái | Điều kiện | `bodyTemperatureX100` / `tb100` | Cờ |
 |---|---|---|---|
 | Không đeo | Nhiệt độ da < 30 °C | không có | `TEMP_UNSTABLE`, `LOOSE` |
-| Đang cân bằng | Đang đeo, chưa đủ 3 phút dữ liệu, hoặc độ dốc > 0,05 °C/phút | không có | `TEMP_UNSTABLE` |
+| Đang đo | Mới đeo, chưa đủ 1 phút dữ liệu | không có | `TEMP_UNSTABLE` |
+| Chưa cân bằng | Đủ 1 phút; chưa đủ 3 phút hoặc độ dốc > 0,05 °C/phút | **có, tạm thời** | `TEMP_UNSTABLE` |
 | Đã cân bằng | Độ dốc trong 3 phút gần nhất ≤ 0,05 °C/phút | có | — |
 
 - **Độ lệch mặc định** là **2,2 °C**, đo thực nghiệm ngày 2026-11-03 trên 1 người (xem [temperature_calibration.csv](temperature_calibration.csv)). Khi dùng giá trị này, cờ `TEMP_UNCALIBRATED` bật.

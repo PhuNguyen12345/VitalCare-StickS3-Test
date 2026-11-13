@@ -191,13 +191,13 @@ void test_body_temperature_column_and_flags() {
     TEST_ASSERT_EQUAL_UINT8(LogFlags::TEMP_UNCALIBRATED, record.flags);
 }
 
-void test_unstable_body_temperature() {
+void test_measuring_body_temperature_is_empty() {
     FakeRepository repo;
     LogService service(repo, 1000, 10000);
     service.begin(0);
 
     BodyTemperature body;
-    body.state = BodyTemperatureState::Stabilizing;
+    body.state = BodyTemperatureState::Measuring;
     body.calibrated = true;
 
     run(service, 10000, [](uint32_t) { return reading(33.6f, 70, 97, 90, 3); }, 1761550000, true, body);
@@ -205,6 +205,23 @@ void test_unstable_body_temperature() {
     const LogRecord& record = repo.records[0];
     TEST_ASSERT_EQUAL_INT16(3360, record.temperatureX100);  // Da vẫn ghi
     TEST_ASSERT_EQUAL_INT16(0, record.bodyTemperatureX100);
+    TEST_ASSERT_EQUAL_UINT8(LogFlags::TEMP_UNSTABLE, record.flags);
+}
+
+void test_provisional_body_temperature_is_logged_with_flag() {
+    FakeRepository repo;
+    LogService service(repo, 1000, 10000);
+    service.begin(0);
+
+    BodyTemperature body;
+    body.state = BodyTemperatureState::Stabilizing;
+    body.bodyC = 36.1f;
+    body.calibrated = true;
+
+    run(service, 10000, [](uint32_t) { return reading(33.6f, 70, 97, 90, 3); }, 1761550000, true, body);
+
+    const LogRecord& record = repo.records[0];
+    TEST_ASSERT_EQUAL_INT16(3610, record.bodyTemperatureX100);
     TEST_ASSERT_EQUAL_UINT8(LogFlags::TEMP_UNSTABLE, record.flags);
 }
 
@@ -236,7 +253,8 @@ int main() {
     RUN_TEST(test_low_confidence_samples_are_excluded);
     RUN_TEST(test_heart_rate_without_spo2);
     RUN_TEST(test_body_temperature_column_and_flags);
-    RUN_TEST(test_unstable_body_temperature);
+    RUN_TEST(test_measuring_body_temperature_is_empty);
+    RUN_TEST(test_provisional_body_temperature_is_logged_with_flag);
     RUN_TEST(test_not_worn_sets_loose);
     return UNITY_END();
 }
