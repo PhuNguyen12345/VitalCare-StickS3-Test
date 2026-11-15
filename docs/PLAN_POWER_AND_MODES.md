@@ -17,7 +17,16 @@
 | 3 ngày (72 giờ) | ≈ 3,5 mA |
 | 4 ngày (96 giờ) | ≈ 2,6 mA |
 
-Hiện tại màn hình, CPU (240 MHz) và cảm biến chạy liên tục, nên thiết bị khó trụ quá một ngày. Muốn đạt mục tiêu, thiết bị phải **ngủ sâu phần lớn thời gian** và chỉ thức dậy để đo.
+Hiện tại màn hình, CPU (240 MHz) và cảm biến chạy liên tục, nên thiết bị khó trụ quá một ngày.
+
+**Đo thật 2026-11-14:**
+- Cấu hình: màn hình luôn bật, không có BLE live.
+- Rút USB lúc 17:21 với pin 95%. Bản ghi CSV cuối cùng lúc 18:39.
+- Kết quả: chạy được **khoảng 1 giờ 20 phút**.
+- Dòng trung bình **≈ 180 mA**, công suất khoảng 0,65 W. Con số này cao gấp khoảng 60 lần ngân sách.
+- Số 95% chỉ là ước lượng tuyến tính theo điện áp của M5Unified, nên kết quả chỉ mang tính tham khảo.
+
+Muốn đạt mục tiêu, thiết bị phải **ngủ sâu phần lớn thời gian** và chỉ thức dậy để đo.
 
 Ước lượng sơ bộ (thức khoảng 45 giây mỗi lần, ≈ 60 mA khi thức):
 
@@ -135,21 +144,52 @@ Không có phép cộng hằng số nào biến nhiệt độ da cổ tay thành
 
 | # | Việc | Mục đích |
 |---|---|---|
-| A1 | **Thí nghiệm tự sinh nhiệt:** để thiết bị trên bàn (không đeo), so sánh số đo khi màn hình/BLE bật và khi tắt | Biết nhiệt tỏa ra từ chính thiết bị có làm sai số đo không |
-| A2 | **Thí nghiệm thời gian cân bằng:** đeo lên tay, ghi số đo mỗi giây trong 10–15 phút | Biết cần chờ bao lâu, chọn ngưỡng "đã ổn định" |
+| A1 | ✅ **Thí nghiệm tự sinh nhiệt** (14/11): để thiết bị trên bàn (không đeo), so sánh số đo khi bật và khi tắt BLE live. Kết quả ở mục [Kết quả A1, A2](#kết-quả-a1-a2-2026-11-14) | Biết nhiệt tỏa ra từ chính thiết bị có làm sai số đo không |
+| A2 | ◐ **Thí nghiệm thời gian cân bằng** (14/11): đeo lên tay, ghi số đo mỗi giây. Đã có một đường cong, nhưng không bắt đầu từ trạng thái nguội | Biết cần chờ bao lâu, chọn ngưỡng "đã ổn định" |
 | A3 | ✅ **Phát hiện cân bằng nhiệt:** độ dốc (hồi quy tuyến tính) trong 3 phút gần nhất ≤ 0,05 °C/phút. Chưa ổn định thì bật cờ `TEMP_UNSTABLE`. **Cập nhật 12/11:** có số tạm thời sau 1 phút đeo, dự đoán nhiệt độ da lúc cân bằng (hằng số thời gian 6 phút, rút từ 2 lần đeo thật) | Có số nhanh như đồng hồ thông minh, vẫn đánh dấu là số tạm thời |
 | A4 | ✅ **Phát hiện không đeo:** nhiệt độ da < 30 °C thì bật cờ `LOOSE` và bắt đầu lại cửa sổ cân bằng | Tránh ghi nhiệt độ của không khí |
 | A5 | ✅ **Nhiệt độ cơ thể ước tính** = trung bình da 1 phút + độ lệch (mặc định 2,2 °C). Hiệu chuẩn qua BLE (`CALIBRATE_TEMP`, `SET_TEMP_OFFSET`), lưu NVS. Chưa hiệu chuẩn thì bật cờ `TEMP_UNCALIBRATED` | Có con số để hiển thị, ghi rõ là ước tính |
 
 Về dữ liệu: CSV `#v3` **giữ nhiệt độ da thô** (`t100`), thêm nhiệt độ cơ thể ước tính (`tb100`) và các cờ. Nhờ vậy backend có thể tính lại khi cải tiến thuật toán. Các ngưỡng nằm trong `TemperatureThresholds` ([BodyTemperature.h](../lib/app_core/src/domain/BodyTemperature.h)). Chi tiết giao thức: mục 3.7 của [BLE_PROTOCOL.md](BLE_PROTOCOL.md).
 
-A1 (thí nghiệm tự sinh nhiệt) và đường cong cân bằng đầy đủ từ phút 0 (A2) vẫn chưa làm.
+### Kết quả A1, A2 (2026-11-14)
+
+Dữ liệu, biểu đồ và script nằm trong [experiments/](experiments/):
+- `2026-11-14_warmup/`: vẽ bằng `tools/plot_temperature.py`.
+- `2026-11-14_selfheat/`: vẽ bằng `tools/plot_selfheat.py`.
+
+**A1, tự sinh nhiệt** (thiết bị nằm trên bàn, lấy trung bình 3 phút cuối mỗi giai đoạn):
+
+| Giai đoạn | Nhiệt độ cảm biến |
+|---|---|
+| Đang sạc | 30,74 °C |
+| Rút USB, không live, sau 10 phút | 29,92 °C (vẫn đang nguội) |
+| Bật BLE live khoảng 15 phút | 31,07 °C (đã ổn định sau khoảng 10 phút) |
+
+- **Bật live làm cảm biến nóng thêm ít nhất 1,15 °C.**
+- Ngay cả khi không live và không sạc, cảm biến trên bàn vẫn đo 28,8–30 °C. Phòng lúc đó khoảng 20 °C (ước chừng, không đo). Như vậy **thiết bị tự sưởi cảm biến cao hơn nhiệt độ phòng nhiều độ**: khoảng 0,65 W tỏa ra trong một khối nhỏ xếp chồng ngay trên MAX30205.
+
+**A2, đeo trên tay, có BLE live suốt buổi** (đeo lúc 16:30, tháo 16:38–16:40, ghi từ 16:40):
+- Da ổn định ở **35,99 °C**, hằng số thời gian khớp được τ ≈ 8,3 phút. Trạng thái Stable sau khoảng 19 phút.
+- Số tạm thời dự đoán nhất quán với số Stable cuối cùng. Cách cộng thẳng thì chậm khoảng 2 °C trong giai đoạn đầu.
+- Số tạm thời dao động khoảng ±0,4 °C, nên cần làm mượt.
+- **Độ lệch miệng − da chỉ còn 0,1–0,3 °C**, thay vì 2,2 °C. Nhiệt kế đo miệng được 35,8–36,2 °C, nên thiết bị báo cao hơn khoảng 2 °C.
+- Ngày 03/11, da chỉ ổn định ở khoảng 34,1 °C. Chênh lệch khoảng 1,8 °C so với hôm nay phần lớn do BLE live làm nóng thêm (A1). Phần còn lại có thể do điều kiện khác nhau.
+
+**Kết luận:**
+- **Độ lệch da → cơ thể phụ thuộc vào chế độ chạy của thiết bị** (màn hình, BLE, sạc). Độ lệch 2,2 °C chỉ đúng với chế độ dùng lúc đo nó.
+- **Chưa hiệu chuẩn lại lúc này.** Hiệu chuẩn sau khi đã có ngủ sâu và đo định kỳ (bước 2 của lộ trình), đúng chế độ thiết bị chạy thật. Khi đó cần đo lại τ và độ lệch.
+- Khi demo trên tay mà đang bật live, số đo cao hơn khoảng 1 °C.
+- Ngưỡng không đeo "da < 30 °C" **không đủ khi phòng ấm**: máy nằm trên bàn vẫn có lúc trên 30 °C, nên bị coi là đang đeo. Cần kết hợp thêm tín hiệu tiếp xúc da từ SEN (bộ cảm biến nhịp tim, SpO2).
+
+Còn thiếu: đường cong cân bằng đầy đủ từ lúc thiết bị nguội (A2), đo không bật live.
 
 ### Giai đoạn B — hiệu chuẩn bằng nhiệt kế (đã có nhiệt kế, đang thu số liệu)
 - **B1. Hiệu chuẩn theo từng bệnh nhân khi check-in:** Healthcare Staff đo bằng nhiệt kế, nhập vào app, app gửi xuống thiết bị. Thiết bị tính độ lệch riêng của người đó sau khi cân bằng nhiệt, rồi tắt cờ `TEMP_UNCALIBRATED`.
 - **B2. Kiểm chứng cho báo cáo:** đo song song với nhiệt kế trên vài người, nhiều lần. Tính sai số trung bình và độ lệch chuẩn (phân tích Bland–Altman).
 
 ### Giai đoạn C — tùy chọn, cần thay đổi phần cứng
+- **Cách nhiệt** giữa StickS3/RTC và bo cảm biến (miếng xốp dày hơn băng dính hai mặt), để cảm biến ít bị thiết bị sưởi nóng (xem A1).
 - Thêm một MAX30205 thứ hai quay ra ngoài để bù nhiệt độ môi trường, hoặc làm phương pháp dòng nhiệt hai cảm biến.
 - Hoặc đổi vị trí đo sang nách/ngực.
 

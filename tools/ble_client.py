@@ -233,28 +233,99 @@ async def cmd_settime(args):
         await client.disconnect()
 
 
+def temperature_state(live):
+    """Trạng thái nhiệt độ suy ra từ cờ, khớp với màn hình thiết bị."""
+    flags = live["flags"]
+
+    if flags & 0x02:
+        return "unavailable"
+    if flags & 0x08:
+        return "not_worn"
+    if live["body_temperature"] is None:
+        return "measuring"
+    if flags & 0x40:
+        return "settling"
+    return "stable"
+
+
+LIVE_CSV_HEADER = "host_time,epoch,seq,skin_c,body_c,state,hr,spo2,conf,finger,flags\n"
+
+
 async def cmd_live(args):
-    client = await connect(args)
+    """Nhận gói live. Có --csv thì ghi mỗi gói một dòng và tự kết nối lại khi mất Bluetooth."""
+    csv_file = None
+
+    if args.csv:
+        path = Path(args.csv)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        is_new = not path.exists() or path.stat().st_size == 0
+        csv_file = path.open("a", encoding="utf-8", buffering=1)
+
+        if is_new:
+            csv_file.write(LIVE_CSV_HEADER)
+
+        print(f"Ghi dữ liệu vào {path}")
 
     def on_live(_sender, data):
         live = decode_live(data)
         temp = "--.--" if live["temperature"] is None else f"{live['temperature']:.2f}"
         body = "--.--" if live["body_temperature"] is None else f"{live['body_temperature']:.2f}"
+        state = temperature_state(live)
         print(
-            f"{format_epoch(live['epoch'])}  skin={temp}  body={body}  hr={live['hr']:3}  spo2={live['spo2']:3}  "
+            f"{format_epoch(live['epoch'])}  skin={temp}  body={body}  [{state}]  hr={live['hr']:3}  spo2={live['spo2']:3}  "
             f"conf={live['confidence']:3}  finger={live['finger']}  "
             f"flags={','.join(flag_names(live['flags'], LOG_FLAGS))}  seq={live['seq']}"
         )
 
+        if csv_file is not None:
+            csv_file.write(
+                f"{datetime.now().astimezone().isoformat(timespec='seconds')},{live['epoch']},{live['seq']},"
+                f"{'' if live['temperature'] is None else live['temperature']},"
+                f"{'' if live['body_temperature'] is None else live['body_temperature']},"
+                f"{state},{live['hr']},{live['spo2']},{live['confidence']},{live['finger']},{live['flags']}\n"
+            )
+
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + args.seconds if args.seconds > 0 else None
+
     try:
-        await client.start_notify(LIVE_UUID, on_live)
-        print("Đang nhận dữ liệu realtime (Ctrl+C để dừng)...")
-        if args.seconds > 0:
-            await asyncio.sleep(args.seconds)
-        else:
-            await asyncio.Event().wait()
+        while True:
+            lost = asyncio.Event()
+
+            try:
+                client = await connect(args, on_disconnect=lost.set)
+            except Exception as error:
+                if csv_file is None:
+                    raise
+                print(f"Chưa kết nối được ({error}), thử lại sau 3 giây...")
+                await asyncio.sleep(3)
+                continue
+
+            try:
+                await client.start_notify(LIVE_UUID, on_live)
+                print("Đang nhận dữ liệu realtime (Ctrl+C để dừng)...")
+
+                remaining = None if deadline is None else max(0, deadline - loop.time())
+
+                try:
+                    await asyncio.wait_for(lost.wait(), timeout=remaining)
+                except asyncio.TimeoutError:
+                    return
+
+                print("Mất kết nối BLE.")
+            finally:
+                if client.is_connected:
+                    await client.disconnect()
+
+            # Không ghi CSV thì dừng như trước; có CSV thì kết nối lại để không đứt dữ liệu thí nghiệm
+            if csv_file is None or (deadline is not None and loop.time() >= deadline):
+                return
+
+            print("Kết nối lại sau 2 giây...")
+            await asyncio.sleep(2)
     finally:
-        await client.disconnect()
+        if csv_file is not None:
+            csv_file.close()
 
 
 async def send_temperature_command(args, payload, description):
@@ -369,6 +440,7 @@ def main():
     parser.add_argument("--name", help="Tên thiết bị, vd VitalCare-1A2B")
     parser.add_argument("--timeout", type=float, default=8.0, help="Thời gian tìm thiết bị (giây)")
     parser.add_argument("--seconds", type=float, default=0, help="live: số giây nhận dữ liệu (0 = tới khi Ctrl+C)")
+    parser.add_argument("--csv", help="live: ghi mỗi gói một dòng vào file CSV, tự kết nối lại khi mất BLE")
     parser.add_argument("--out", default="ble_logs", help="sync: thư mục lưu CSV")
     parser.add_argument("--idle-timeout", type=float, default=15.0, help="sync: dừng nếu không có gói trong N giây")
     parser.add_argument("--ref", type=float, help="calibrate: nhiệt độ miệng đo bằng nhiệt kế (°C)")
